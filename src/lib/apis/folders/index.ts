@@ -1,4 +1,5 @@
 import { WEBUI_API_BASE_URL } from '$lib/constants';
+import { apiFetch } from '$lib/utils/api';
 
 type FolderForm = {
 	name?: string;
@@ -6,269 +7,54 @@ type FolderForm = {
 	meta?: Record<string, any>;
 };
 
-export const createNewFolder = async (token: string, folderForm: FolderForm) => {
-	let error = null;
+export const createNewFolder = (token: string, folderForm: FolderForm) =>
+	apiFetch(`${WEBUI_API_BASE_URL}/folders/`, { method: 'POST', token, body: folderForm });
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/folders/`, {
+export const getFolders = (token: string = '') =>
+	apiFetch(`${WEBUI_API_BASE_URL}/folders/`, { token });
+
+export const getFolderById = (token: string, id: string) =>
+	apiFetch(`${WEBUI_API_BASE_URL}/folders/${id}`, { token });
+
+export const updateFolderById = (token: string, id: string, folderForm: FolderForm) =>
+	apiFetch(`${WEBUI_API_BASE_URL}/folders/${id}/update`, {
 		method: 'POST',
-		headers: {
-			Accept: 'application/json',
-			'Content-Type': 'application/json',
-			authorization: `Bearer ${token}`
-		},
-		body: JSON.stringify(folderForm)
-	})
-		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
-		})
-		.catch((err) => {
-			error = err.detail;
-			return null;
-		});
+		token,
+		body: folderForm
+	});
 
-	if (error) {
-		throw error;
-	}
-
-	return res;
-};
-
-export const getFolders = async (token: string = '') => {
-	let error = null;
-
-	const res = await fetch(`${WEBUI_API_BASE_URL}/folders/`, {
-		method: 'GET',
-		headers: {
-			Accept: 'application/json',
-			'Content-Type': 'application/json',
-			authorization: `Bearer ${token}`
-		}
-	})
-		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
-		})
-		.then((json) => {
-			return json;
-		})
-		.catch((err) => {
-			error = err.detail;
-			console.error(err);
-			return null;
-		});
-
-	if (error) {
-		throw error;
-	}
-
-	return res;
-};
-
-export const getFolderById = async (token: string, id: string) => {
-	let error = null;
-
-	const res = await fetch(`${WEBUI_API_BASE_URL}/folders/${id}`, {
-		method: 'GET',
-		headers: {
-			Accept: 'application/json',
-			'Content-Type': 'application/json',
-			authorization: `Bearer ${token}`
-		}
-	})
-		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
-		})
-		.then((json) => {
-			return json;
-		})
-		.catch((err) => {
-			error = err.detail;
-			console.error(err);
-			return null;
-		});
-
-	if (error) {
-		throw error;
-	}
-
-	return res;
-};
-
-export const updateFolderById = async (token: string, id: string, folderForm: FolderForm) => {
-	let error = null;
-
-	const res = await fetch(`${WEBUI_API_BASE_URL}/folders/${id}/update`, {
+export const updateFolderIsExpandedById = (token: string, id: string, isExpanded: boolean) =>
+	apiFetch(`${WEBUI_API_BASE_URL}/folders/${id}/update/expanded`, {
 		method: 'POST',
-		headers: {
-			Accept: 'application/json',
-			'Content-Type': 'application/json',
-			authorization: `Bearer ${token}`
-		},
-		body: JSON.stringify(folderForm)
-	})
-		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
-		})
-		.then((json) => {
-			return json;
-		})
-		.catch((err) => {
-			error = err.detail;
-			console.error(err);
-			return null;
-		});
+		token,
+		body: { is_expanded: isExpanded }
+	});
 
-	if (error) {
-		throw error;
-	}
-
-	return res;
-};
-
-export const updateFolderIsExpandedById = async (
-	token: string,
-	id: string,
-	isExpanded: boolean
-) => {
-	let error = null;
-
-	const res = await fetch(`${WEBUI_API_BASE_URL}/folders/${id}/update/expanded`, {
+export const updateFolderParentIdById = (token: string, id: string, parentId?: string) =>
+	apiFetch(`${WEBUI_API_BASE_URL}/folders/${id}/update/parent`, {
 		method: 'POST',
-		headers: {
-			Accept: 'application/json',
-			'Content-Type': 'application/json',
-			authorization: `Bearer ${token}`
-		},
-		body: JSON.stringify({
-			is_expanded: isExpanded
-		})
-	})
-		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
-		})
-		.then((json) => {
-			return json;
-		})
-		.catch((err) => {
-			error = err.detail;
-			console.error(err);
-			return null;
-		});
-
-	if (error) {
-		throw error;
-	}
-
-	return res;
-};
-
-export const updateFolderParentIdById = async (token: string, id: string, parentId?: string) => {
-	let error = null;
-
-	const res = await fetch(`${WEBUI_API_BASE_URL}/folders/${id}/update/parent`, {
-		method: 'POST',
-		headers: {
-			Accept: 'application/json',
-			'Content-Type': 'application/json',
-			authorization: `Bearer ${token}`
-		},
-		body: JSON.stringify({
-			parent_id: parentId
-		})
-	})
-		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
-		})
-		.then((json) => {
-			return json;
-		})
-		.catch((err) => {
-			error = err.detail;
-			console.error(err);
-			return null;
-		});
-
-	if (error) {
-		throw error;
-	}
-
-	return res;
-};
+		token,
+		body: { parent_id: parentId }
+	});
 
 type FolderItems = {
 	chat_ids: string[];
 	file_ids: string[];
 };
 
-export const updateFolderItemsById = async (token: string, id: string, items: FolderItems) => {
-	let error = null;
-
-	const res = await fetch(`${WEBUI_API_BASE_URL}/folders/${id}/update/items`, {
+export const updateFolderItemsById = (token: string, id: string, items: FolderItems) =>
+	apiFetch(`${WEBUI_API_BASE_URL}/folders/${id}/update/items`, {
 		method: 'POST',
-		headers: {
-			Accept: 'application/json',
-			'Content-Type': 'application/json',
-			authorization: `Bearer ${token}`
-		},
-		body: JSON.stringify({
-			items: items
-		})
-	})
-		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
-		})
-		.then((json) => {
-			return json;
-		})
-		.catch((err) => {
-			error = err.detail;
-			console.error(err);
-			return null;
-		});
-
-	if (error) {
-		throw error;
-	}
-
-	return res;
-};
+		token,
+		body: { items: items }
+	});
 
 export const deleteFolderById = async (token: string, id: string, deleteContents: boolean) => {
-	let error = null;
-
 	const searchParams = new URLSearchParams();
 	searchParams.append('delete_contents', deleteContents ? 'true' : 'false');
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/folders/${id}?${searchParams.toString()}`, {
+	return apiFetch(`${WEBUI_API_BASE_URL}/folders/${id}?${searchParams.toString()}`, {
 		method: 'DELETE',
-		headers: {
-			Accept: 'application/json',
-			'Content-Type': 'application/json',
-			authorization: `Bearer ${token}`
-		}
-	})
-		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
-		})
-		.then((json) => {
-			return json;
-		})
-		.catch((err) => {
-			error = err.detail;
-			console.error(err);
-			return null;
-		});
-
-	if (error) {
-		throw error;
-	}
-
-	return res;
+		token
+	});
 };

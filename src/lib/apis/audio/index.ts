@@ -1,31 +1,8 @@
 import { AUDIO_API_BASE_URL } from '$lib/constants';
+import { apiFetch } from '$lib/utils/api';
 
-export const getAudioConfig = async (token: string) => {
-	let error = null;
-
-	const res = await fetch(`${AUDIO_API_BASE_URL}/config`, {
-		method: 'GET',
-		headers: {
-			'Content-Type': 'application/json',
-			Authorization: `Bearer ${token}`
-		}
-	})
-		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
-		})
-		.catch((err) => {
-			console.error(err);
-			error = err.detail;
-			return null;
-		});
-
-	if (error) {
-		throw error;
-	}
-
-	return res;
-};
+export const getAudioConfig = (token: string) =>
+	apiFetch(`${AUDIO_API_BASE_URL}/config`, { token });
 
 type OpenAIConfigForm = {
 	url: string;
@@ -34,35 +11,8 @@ type OpenAIConfigForm = {
 	speaker: string;
 };
 
-export const updateAudioConfig = async (token: string, payload: OpenAIConfigForm) => {
-	let error = null;
-
-	const res = await fetch(`${AUDIO_API_BASE_URL}/config/update`, {
-		method: 'POST',
-		headers: {
-			'Content-Type': 'application/json',
-			Authorization: `Bearer ${token}`
-		},
-		body: JSON.stringify({
-			...payload
-		})
-	})
-		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
-		})
-		.catch((err) => {
-			console.error(err);
-			error = err.detail;
-			return null;
-		});
-
-	if (error) {
-		throw error;
-	}
-
-	return res;
-};
+export const updateAudioConfig = (token: string, payload: OpenAIConfigForm) =>
+	apiFetch(`${AUDIO_API_BASE_URL}/config/update`, { method: 'POST', token, body: { ...payload } });
 
 export const transcribeAudio = async (token: string, file: File, language?: string) => {
 	const data = new FormData();
@@ -71,30 +21,7 @@ export const transcribeAudio = async (token: string, file: File, language?: stri
 		data.append('language', language);
 	}
 
-	let error = null;
-	const res = await fetch(`${AUDIO_API_BASE_URL}/transcriptions`, {
-		method: 'POST',
-		headers: {
-			Accept: 'application/json',
-			authorization: `Bearer ${token}`
-		},
-		body: data
-	})
-		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
-		})
-		.catch((err) => {
-			error = err.detail;
-			console.error(err);
-			return null;
-		});
-
-	if (error) {
-		throw error;
-	}
-
-	return res;
+	return apiFetch(`${AUDIO_API_BASE_URL}/transcriptions`, { method: 'POST', token, body: data });
 };
 
 export const synthesizeOpenAISpeech = async (
@@ -139,58 +66,8 @@ interface AvailableModelsResponse {
 	models: { name: string; id: string }[] | { id: string }[];
 }
 
-export const getModels = async (token: string = ''): Promise<AvailableModelsResponse> => {
-	let error = null;
+export const getModels = (token: string = ''): Promise<AvailableModelsResponse> =>
+	apiFetch(`${AUDIO_API_BASE_URL}/models`, { token });
 
-	const res = await fetch(`${AUDIO_API_BASE_URL}/models`, {
-		method: 'GET',
-		headers: {
-			'Content-Type': 'application/json',
-			Authorization: `Bearer ${token}`
-		}
-	})
-		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
-		})
-		.catch((err) => {
-			error = err.detail;
-			console.error(err);
-
-			return null;
-		});
-
-	if (error) {
-		throw error;
-	}
-
-	return res;
-};
-
-export const getVoices = async (token: string = '') => {
-	let error = null;
-
-	const res = await fetch(`${AUDIO_API_BASE_URL}/voices`, {
-		method: 'GET',
-		headers: {
-			'Content-Type': 'application/json',
-			Authorization: `Bearer ${token}`
-		}
-	})
-		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
-		})
-		.catch((err) => {
-			error = err.detail;
-			console.error(err);
-
-			return null;
-		});
-
-	if (error) {
-		throw error;
-	}
-
-	return res;
-};
+export const getVoices = (token: string = '') =>
+	apiFetch(`${AUDIO_API_BASE_URL}/voices`, { token });
