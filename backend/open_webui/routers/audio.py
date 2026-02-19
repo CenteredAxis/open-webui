@@ -6,8 +6,6 @@ import uuid
 import html
 import base64
 from functools import lru_cache
-from pydub import AudioSegment
-from pydub.silence import split_on_silence
 from concurrent.futures import ThreadPoolExecutor
 from typing import Optional
 
@@ -78,14 +76,12 @@ SPEECH_CACHE_DIR.mkdir(parents=True, exist_ok=True)
 #
 ##########################################
 
-from pydub import AudioSegment
-from pydub.utils import mediainfo
-
-
 def is_audio_conversion_required(file_path):
     """
     Check if the given audio file needs conversion to mp3.
     """
+    from pydub.utils import mediainfo
+
     SUPPORTED_FORMATS = {"flac", "m4a", "mp3", "mp4", "mpeg", "wav", "webm"}
 
     if not os.path.isfile(file_path):
@@ -114,6 +110,8 @@ def is_audio_conversion_required(file_path):
 
 def convert_audio_to_mp3(file_path):
     """Convert audio file to mp3 format."""
+    from pydub import AudioSegment
+
     try:
         output_path = os.path.splitext(file_path)[0] + ".mp3"
         audio = AudioSegment.from_file(file_path)
@@ -1107,6 +1105,8 @@ def transcribe(
 
 
 def compress_audio(file_path):
+    from pydub import AudioSegment
+
     if os.path.getsize(file_path) > MAX_FILE_SIZE:
         id = os.path.splitext(os.path.basename(file_path))[
             0
@@ -1130,6 +1130,8 @@ def split_audio(file_path, max_bytes, format="mp3", bitrate="32k"):
     Splits audio into chunks not exceeding max_bytes.
     Returns a list of chunk file paths. If audio fits, returns list with original path.
     """
+    from pydub import AudioSegment
+
     file_size = os.path.getsize(file_path)
     if file_size <= max_bytes:
         return [file_path]  # Nothing to split
