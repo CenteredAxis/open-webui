@@ -470,7 +470,8 @@ async def get_ollama_tags(
             if ENABLE_FORWARD_USER_INFO_HEADERS and user:
                 headers = include_user_info_headers(headers, user)
 
-            r = requests.request(
+            r = await asyncio.to_thread(
+                requests.request,
                 method="GET",
                 url=f"{url}/api/tags",
                 headers=headers,
@@ -612,7 +613,9 @@ async def get_ollama_versions(request: Request, url_idx: Optional[int] = None):
 
             r = None
             try:
-                r = requests.request(method="GET", url=f"{url}/api/version")
+                r = await asyncio.to_thread(
+                    requests.request, method="GET", url=f"{url}/api/version"
+                )
                 r.raise_for_status()
 
                 return r.json()
@@ -834,6 +837,7 @@ async def copy_model(
     url = request.app.state.config.OLLAMA_BASE_URLS[url_idx]
     key = get_api_key(url_idx, url, request.app.state.config.OLLAMA_API_CONFIGS)
 
+    r = None
     try:
         headers = {
             "Content-Type": "application/json",
@@ -843,7 +847,8 @@ async def copy_model(
         if ENABLE_FORWARD_USER_INFO_HEADERS and user:
             headers = include_user_info_headers(headers, user)
 
-        r = requests.request(
+        r = await asyncio.to_thread(
+            requests.request,
             method="POST",
             url=f"{url}/api/copy",
             headers=headers,
@@ -912,7 +917,8 @@ async def delete_model(
         if ENABLE_FORWARD_USER_INFO_HEADERS and user:
             headers = include_user_info_headers(headers, user)
 
-        r = requests.request(
+        r = await asyncio.to_thread(
+            requests.request,
             method="DELETE",
             url=f"{url}/api/delete",
             headers=headers,
@@ -966,6 +972,7 @@ async def show_model_info(
     url = request.app.state.config.OLLAMA_BASE_URLS[url_idx]
     key = get_api_key(url_idx, url, request.app.state.config.OLLAMA_API_CONFIGS)
 
+    r = None
     try:
         headers = {
             "Content-Type": "application/json",
@@ -975,8 +982,12 @@ async def show_model_info(
         if ENABLE_FORWARD_USER_INFO_HEADERS and user:
             headers = include_user_info_headers(headers, user)
 
-        r = requests.request(
-            method="POST", url=f"{url}/api/show", headers=headers, json=form_data
+        r = await asyncio.to_thread(
+            requests.request,
+            method="POST",
+            url=f"{url}/api/show",
+            headers=headers,
+            json=form_data,
         )
         r.raise_for_status()
 
@@ -1052,6 +1063,7 @@ async def embed(
     if prefix_id:
         form_data.model = form_data.model.replace(f"{prefix_id}.", "")
 
+    r = None
     try:
         headers = {
             "Content-Type": "application/json",
@@ -1061,7 +1073,8 @@ async def embed(
         if ENABLE_FORWARD_USER_INFO_HEADERS and user:
             headers = include_user_info_headers(headers, user)
 
-        r = requests.request(
+        r = await asyncio.to_thread(
+            requests.request,
             method="POST",
             url=f"{url}/api/embed",
             headers=headers,
@@ -1137,6 +1150,7 @@ async def embeddings(
     if prefix_id:
         form_data.model = form_data.model.replace(f"{prefix_id}.", "")
 
+    r = None
     try:
         headers = {
             "Content-Type": "application/json",
@@ -1146,7 +1160,8 @@ async def embeddings(
         if ENABLE_FORWARD_USER_INFO_HEADERS and user:
             headers = include_user_info_headers(headers, user)
 
-        r = requests.request(
+        r = await asyncio.to_thread(
+            requests.request,
             method="POST",
             url=f"{url}/api/embeddings",
             headers=headers,
@@ -1605,7 +1620,9 @@ async def get_openai_models(
     else:
         url = request.app.state.config.OLLAMA_BASE_URLS[url_idx]
         try:
-            r = requests.request(method="GET", url=f"{url}/api/tags")
+            r = await asyncio.to_thread(
+                requests.request, method="GET", url=f"{url}/api/tags"
+            )
             r.raise_for_status()
 
             model_list = r.json()
@@ -1697,6 +1714,13 @@ def parse_huggingface_url(hf_url):
         return None
 
 
+def _upload_blob_sync(url, file_path, timeout=30):
+    """Upload a local file to Ollama blob API; runs in a thread via asyncio.to_thread."""
+    with open(file_path, "rb") as file:
+        with requests.Session() as session:
+            return session.post(url, data=file, timeout=timeout)
+
+
 async def download_file_stream(
     ollama_url, file_url, file_path, file_name, chunk_size=1024 * 1024
 ):
@@ -1731,23 +1755,24 @@ async def download_file_stream(
                     file.close()
                     hashed = calculate_sha256(file_path, chunk_size)
 
-                    with open(file_path, "rb") as file:
-                        chunk_size = 1024 * 1024 * 2
-                        url = f"{ollama_url}/api/blobs/sha256:{hashed}"
-                        with requests.Session() as session:
-                            response = session.post(url, data=file, timeout=30)
+                    url = f"{ollama_url}/api/blobs/sha256:{hashed}"
+                    response = await asyncio.to_thread(
+                        _upload_blob_sync, url, file_path
+                    )
 
-                            if response.ok:
-                                res = {
-                                    "done": done,
-                                    "blob": f"sha256:{hashed}",
-                                    "name": file_name,
-                                }
-                                os.remove(file_path)
+                    if response.ok:
+                        res = {
+                            "done": done,
+                            "blob": f"sha256:{hashed}",
+                            "name": file_name,
+                        }
+                        os.remove(file_path)
 
-                                yield f"data: {json.dumps(res)}\n\n"
-                            else:
-                                raise "Ollama: Could not create blob, Please try again."
+                        yield f"data: {json.dumps(res)}\n\n"
+                    else:
+                        raise Exception(
+                            "Ollama: Could not create blob, Please try again."
+                        )
 
 
 # url = "https://huggingface.co/TheBloke/stablelm-zephyr-3b-GGUF/resolve/main/stablelm-zephyr-3b.Q2_K.gguf"
@@ -1832,9 +1857,8 @@ async def upload_model(
                     yield f"data: {json.dumps(data_msg)}\n\n"
 
             # --- P3: Upload to ollama /api/blobs ---
-            with open(file_path, "rb") as f:
-                url = f"{ollama_url}/api/blobs/sha256:{file_hash}"
-                response = requests.post(url, data=f)
+            url = f"{ollama_url}/api/blobs/sha256:{file_hash}"
+            response = await asyncio.to_thread(_upload_blob_sync, url, file_path)
 
             if response.ok:
                 log.info(f"Uploaded to /api/blobs")  # DEBUG
@@ -1854,7 +1878,8 @@ async def upload_model(
 
                 # Call ollama /api/create
                 # https://github.com/ollama/ollama/blob/main/docs/api.md#create-a-model
-                create_resp = requests.post(
+                create_resp = await asyncio.to_thread(
+                    requests.post,
                     url=f"{ollama_url}/api/create",
                     headers={"Content-Type": "application/json"},
                     data=json.dumps(create_payload),

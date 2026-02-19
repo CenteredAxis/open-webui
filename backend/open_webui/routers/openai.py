@@ -262,6 +262,22 @@ async def update_config(
     }
 
 
+def _fetch_speech_to_file(url, body, headers, cookies, file_path):
+    """Download TTS audio from OpenAI and save to file; runs in a thread via asyncio.to_thread."""
+    r = requests.post(
+        url=url,
+        data=body,
+        headers=headers,
+        cookies=cookies,
+        stream=True,
+    )
+    r.raise_for_status()
+    with open(file_path, "wb") as f:
+        for chunk in r.iter_content(chunk_size=8192):
+            f.write(chunk)
+    return r
+
+
 @router.post("/audio/speech")
 async def speech(request: Request, user=Depends(get_verified_user)):
     idx = None
@@ -295,20 +311,14 @@ async def speech(request: Request, user=Depends(get_verified_user)):
 
         r = None
         try:
-            r = requests.post(
-                url=f"{url}/audio/speech",
-                data=body,
-                headers=headers,
-                cookies=cookies,
-                stream=True,
+            r = await asyncio.to_thread(
+                _fetch_speech_to_file,
+                f"{url}/audio/speech",
+                body,
+                headers,
+                cookies,
+                file_path,
             )
-
-            r.raise_for_status()
-
-            # Save the streaming content to a file
-            with open(file_path, "wb") as f:
-                for chunk in r.iter_content(chunk_size=8192):
-                    f.write(chunk)
 
             with open(file_body_path, "w") as f:
                 json.dump(json.loads(body.decode("utf-8")), f)

@@ -351,7 +351,8 @@ def get_automatic1111_api_auth(request: Request):
 async def verify_url(request: Request, user=Depends(get_admin_user)):
     if request.app.state.config.IMAGE_GENERATION_ENGINE == "automatic1111":
         try:
-            r = requests.get(
+            r = await asyncio.to_thread(
+                requests.get,
                 url=f"{request.app.state.config.AUTOMATIC1111_BASE_URL}/sdapi/v1/options",
                 headers={"authorization": get_automatic1111_api_auth(request)},
             )
@@ -367,7 +368,8 @@ async def verify_url(request: Request, user=Depends(get_admin_user)):
                 "Authorization": f"Bearer {request.app.state.config.COMFYUI_API_KEY}"
             }
         try:
-            r = requests.get(
+            r = await asyncio.to_thread(
+                requests.get,
                 url=f"{request.app.state.config.COMFYUI_BASE_URL}/object_info",
                 headers=headers,
             )
