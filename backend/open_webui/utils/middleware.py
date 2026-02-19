@@ -40,6 +40,12 @@ from open_webui.routers.tasks import (
     generate_image_prompt,
     generate_chat_tags,
 )
+from open_webui.routers.context import (
+    harvest_context,
+    _context_note_tool,
+    _context_note_knowledge,
+    _context_note_model,
+)
 from open_webui.routers.retrieval import (
     process_web_search,
     SearchForm,
@@ -993,6 +999,36 @@ def process_tool_result(
     return tool_result, tool_result_files, tool_result_embeds
 
 
+async def chat_context_handler(form_data: dict, user) -> dict:
+    """Inject the user's living context into the system message.
+
+    Reads user.info["context"] and prepends a <user_context> block so the
+    model already knows who it's speaking with. Always-on; fails silently.
+    """
+    try:
+        ctx = (user.info or {}).get("context", {})
+        if not ctx:
+            return form_data
+        parts = []
+        if ctx.get("profile"):
+            parts.append(f"User profile: {ctx['profile']}")
+        if ctx.get("interests"):
+            parts.append(f"Interests: {', '.join(ctx['interests'])}")
+        if ctx.get("preferences", {}).get("style"):
+            parts.append(f"Communication preference: {ctx['preferences']['style']}")
+        if ctx.get("recent_sessions"):
+            last = ctx["recent_sessions"][-1]
+            parts.append(f"Last session: {last.get('summary', '')}")
+        if parts:
+            block = "<user_context>\n" + "\n".join(parts) + "\n</user_context>"
+            form_data["messages"] = add_or_update_system_message(
+                block, form_data["messages"], append=True
+            )
+    except Exception:
+        pass
+    return form_data
+
+
 async def chat_completion_tools_handler(
     request: Request, body: dict, extra_params: dict, user: UserModel, models, tools
 ) -> tuple[dict, dict]:
@@ -1176,6 +1212,8 @@ async def chat_completion_tools_handler(
                         if tool_id
                         else f"{tool_function_name}"
                     )
+
+                    _context_note_tool(user, tool_function_name)
 
                     # Citation is enabled for this tool
                     sources.append(
@@ -2019,6 +2057,7 @@ async def process_chat_payload(request, form_data, user, metadata, model):
         except:
             pass
 
+    form_data = await chat_context_handler(form_data, user)
     form_data = await convert_url_images_to_base64(form_data)
 
     event_emitter = get_event_emitter(metadata)
@@ -2117,6 +2156,8 @@ async def process_chat_payload(request, form_data, user, metadata, model):
         files = form_data.get("files", [])
         files.extend(knowledge_files)
         form_data["files"] = files
+
+        _context_note_knowledge(user, [item.get("name") for item in model_knowledge])
 
     variables = form_data.pop("variables", None)
 
@@ -2267,6 +2308,8 @@ async def process_chat_payload(request, form_data, user, metadata, model):
         "files": files,
     }
     form_data["metadata"] = metadata
+
+    _context_note_model(user, form_data.get("model"))
 
     # Server side tools
     tool_ids = metadata.get("tool_ids", None)
@@ -2863,6 +2906,14 @@ async def background_tasks_handler(ctx):
                             )
                         except Exception as e:
                             pass
+
+                # Context harvest — fire-and-forget background task.
+                # Extracts durable facts from the conversation and grows
+                # the user's living context document. Fails silently.
+                if messages and len(messages) >= 4:
+                    asyncio.ensure_future(
+                        harvest_context(request, messages, user, metadata)
+                    )
 
 
 async def non_streaming_chat_response_handler(response, ctx):
@@ -4096,6 +4147,8 @@ async def streaming_chat_response_handler(response, ctx):
                                 user,
                             )
                         )
+
+                        _context_note_tool(user, tool_function_name)
 
                         # Extract citation sources from tool results
                         if (
