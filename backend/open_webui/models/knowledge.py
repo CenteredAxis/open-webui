@@ -143,6 +143,16 @@ class KnowledgeTable:
     ) -> list[AccessGrantModel]:
         return AccessGrants.get_grants_by_resource("knowledge", knowledge_id, db=db)
 
+    def _batch_access_grants(
+        self, knowledge_ids: list[str], db: Optional[Session] = None
+    ) -> dict[str, list]:
+        """Batch-load grants for multiple KBs in one query → {knowledge_id: [grants]}."""
+        grants = AccessGrants.get_grants_by_resources("knowledge", knowledge_ids, db=db)
+        result: dict[str, list] = {kid: [] for kid in knowledge_ids}
+        for grant in grants:
+            result.setdefault(grant.resource_id, []).append(grant)
+        return result
+
     def _to_knowledge_model(
         self, knowledge: Knowledge, db: Optional[Session] = None
     ) -> KnowledgeModel:
@@ -196,15 +206,20 @@ class KnowledgeTable:
             users = Users.get_users_by_user_ids(user_ids, db=db) if user_ids else []
             users_dict = {user.id: user for user in users}
 
+            # Batch-load all access grants in one query instead of one per KB
+            knowledge_ids = [k.id for k in all_knowledge]
+            grants_by_id = self._batch_access_grants(knowledge_ids, db=db)
+
             knowledge_bases = []
             for knowledge in all_knowledge:
                 user = users_dict.get(knowledge.user_id)
+                kb_data = KnowledgeModel.model_validate(knowledge).model_dump(
+                    exclude={"access_grants"}
+                )
+                kb_data["access_grants"] = grants_by_id.get(knowledge.id, [])
                 knowledge_bases.append(
                     KnowledgeUserModel.model_validate(
-                        {
-                            **self._to_knowledge_model(knowledge, db=db).model_dump(),
-                            "user": user.model_dump() if user else None,
-                        }
+                        {**kb_data, "user": user.model_dump() if user else None}
                     )
                 )
             return knowledge_bases
@@ -261,14 +276,20 @@ class KnowledgeTable:
 
                 items = query.all()
 
+                # Batch-load all access grants in one query instead of one per KB
+                knowledge_ids = [kb.id for kb, _ in items]
+                grants_by_id = self._batch_access_grants(knowledge_ids, db=db)
+
                 knowledge_bases = []
                 for knowledge_base, user in items:
+                    kb_data = KnowledgeModel.model_validate(knowledge_base).model_dump(
+                        exclude={"access_grants"}
+                    )
+                    kb_data["access_grants"] = grants_by_id.get(knowledge_base.id, [])
                     knowledge_bases.append(
                         KnowledgeUserModel.model_validate(
                             {
-                                **self._to_knowledge_model(
-                                    knowledge_base, db=db
-                                ).model_dump(),
+                                **kb_data,
                                 "user": (
                                     UserModel.model_validate(user).model_dump()
                                     if user
@@ -330,8 +351,16 @@ class KnowledgeTable:
 
                 rows = query.all()
 
+                # Batch-load access grants for all unique KBs in the result
+                unique_kb_ids = list({knowledge.id for _, _, knowledge in rows})
+                grants_by_id = self._batch_access_grants(unique_kb_ids, db=db)
+
                 items = []
                 for file, user, knowledge in rows:
+                    kb_data = KnowledgeModel.model_validate(knowledge).model_dump(
+                        exclude={"access_grants"}
+                    )
+                    kb_data["access_grants"] = grants_by_id.get(knowledge.id, [])
                     items.append(
                         FileUserResponse(
                             **FileModel.model_validate(file).model_dump(),
@@ -342,9 +371,7 @@ class KnowledgeTable:
                                 if user
                                 else None
                             ),
-                            collection=self._to_knowledge_model(
-                                knowledge, db=db
-                            ).model_dump(),
+                            collection=kb_data,
                         )
                     )
 
@@ -377,23 +404,50 @@ class KnowledgeTable:
     def get_knowledge_bases_by_user_id(
         self, user_id: str, permission: str = "write", db: Optional[Session] = None
     ) -> list[KnowledgeUserModel]:
-        knowledge_bases = self.get_knowledge_bases(db=db)
-        user_group_ids = {
-            group.id for group in Groups.get_groups_by_member_id(user_id, db=db)
-        }
-        return [
-            knowledge_base
-            for knowledge_base in knowledge_bases
-            if knowledge_base.user_id == user_id
-            or AccessGrants.has_access(
-                user_id=user_id,
-                resource_type="knowledge",
-                resource_id=knowledge_base.id,
-                permission=permission,
-                user_group_ids=user_group_ids,
-                db=db,
+        with get_db_context(db) as db:
+            user_group_ids = [
+                group.id for group in Groups.get_groups_by_member_id(user_id, db=db)
+            ]
+            filter_dict = {"user_id": user_id, "group_ids": user_group_ids}
+
+            # Push the access-control filter to SQL instead of loading all KBs
+            query = db.query(Knowledge, User).outerjoin(
+                User, User.id == Knowledge.user_id
             )
-        ]
+            query = AccessGrants.has_permission_filter(
+                db=db,
+                query=query,
+                DocumentModel=Knowledge,
+                filter=filter_dict,
+                resource_type="knowledge",
+                permission=permission,
+            )
+            query = query.order_by(Knowledge.updated_at.desc(), Knowledge.id.asc())
+            items = query.all()
+
+            # Batch-load access grants for the filtered result set
+            knowledge_ids = [kb.id for kb, _ in items]
+            grants_by_id = self._batch_access_grants(knowledge_ids, db=db)
+
+            knowledge_bases = []
+            for knowledge, user in items:
+                kb_data = KnowledgeModel.model_validate(knowledge).model_dump(
+                    exclude={"access_grants"}
+                )
+                kb_data["access_grants"] = grants_by_id.get(knowledge.id, [])
+                knowledge_bases.append(
+                    KnowledgeUserModel.model_validate(
+                        {
+                            **kb_data,
+                            "user": (
+                                UserModel.model_validate(user).model_dump()
+                                if user
+                                else None
+                            ),
+                        }
+                    )
+                )
+            return knowledge_bases
 
     def get_knowledge_by_id(
         self, id: str, db: Optional[Session] = None

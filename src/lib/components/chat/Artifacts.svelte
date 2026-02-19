@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { toast } from 'svelte-sonner';
-	import { onMount, getContext, createEventDispatcher } from 'svelte';
+	import { onMount, onDestroy, getContext, createEventDispatcher } from 'svelte';
 	const i18n = getContext('i18n');
 	const dispatch = createEventDispatcher();
 
@@ -28,6 +28,8 @@
 
 	let copied = false;
 	let iframeElement: HTMLIFrameElement;
+	let unsubArtifactCode: () => void;
+	let unsubArtifactContents: () => void;
 
 	function navigateContent(direction: 'prev' | 'next') {
 		selectedContentIdx =
@@ -36,35 +38,34 @@
 				: Math.min(selectedContentIdx + 1, contents.length - 1);
 	}
 
-	const iframeLoadHandler = () => {
-		iframeElement.contentWindow.addEventListener(
-			'click',
-			function (e) {
-				const target = e.target.closest('a');
-				if (target && target.href) {
-					e.preventDefault();
-					const url = new URL(target.href, iframeElement.baseURI);
-					if (url.origin === window.location.origin) {
-						iframeElement.contentWindow.history.pushState(
-							null,
-							'',
-							url.pathname + url.search + url.hash
-						);
-					} else {
-						console.info('External navigation blocked:', url.href);
-					}
-				}
-			},
-			true
-		);
-
-		// Cancel drag when hovering over iframe
-		iframeElement.contentWindow.addEventListener('mouseenter', function (e) {
+	const handleIframeClick = (e: MouseEvent) => {
+		const target = (e.target as HTMLElement).closest('a');
+		if (target && (target as HTMLAnchorElement).href) {
 			e.preventDefault();
-			iframeElement.contentWindow.addEventListener('dragstart', (event) => {
-				event.preventDefault();
-			});
+			const url = new URL((target as HTMLAnchorElement).href, iframeElement.baseURI);
+			if (url.origin === window.location.origin) {
+				iframeElement.contentWindow!.history.pushState(
+					null,
+					'',
+					url.pathname + url.search + url.hash
+				);
+			} else {
+				console.info('External navigation blocked:', url.href);
+			}
+		}
+	};
+
+	const handleIframeMouseEnter = (e: MouseEvent) => {
+		e.preventDefault();
+		iframeElement.contentWindow!.addEventListener('dragstart', (event) => {
+			event.preventDefault();
 		});
+	};
+
+	const iframeLoadHandler = () => {
+		// Cancel drag when hovering over iframe
+		iframeElement.contentWindow!.addEventListener('click', handleIframeClick, true);
+		iframeElement.contentWindow!.addEventListener('mouseenter', handleIframeMouseEnter);
 	};
 
 	const showFullScreen = () => {
@@ -90,14 +91,14 @@
 	};
 
 	onMount(() => {
-		artifactCode.subscribe((value) => {
+		unsubArtifactCode = artifactCode.subscribe((value) => {
 			if (contents) {
 				const codeIdx = contents.findIndex((content) => content.content.includes(value));
 				selectedContentIdx = codeIdx !== -1 ? codeIdx : 0;
 			}
 		});
 
-		artifactContents.subscribe((value) => {
+		unsubArtifactContents = artifactContents.subscribe((value) => {
 			contents = value;
 			console.log('Artifact contents updated:', contents);
 
@@ -108,6 +109,15 @@
 
 			selectedContentIdx = contents ? contents.length - 1 : 0;
 		});
+	});
+
+	onDestroy(() => {
+		unsubArtifactCode?.();
+		unsubArtifactContents?.();
+		if (iframeElement?.contentWindow) {
+			iframeElement.contentWindow.removeEventListener('click', handleIframeClick, true);
+			iframeElement.contentWindow.removeEventListener('mouseenter', handleIframeMouseEnter);
+		}
 	});
 </script>
 

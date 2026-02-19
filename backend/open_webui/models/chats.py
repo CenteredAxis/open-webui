@@ -1517,8 +1517,10 @@ class ChatTable:
     ) -> bool:
         try:
             with get_db_context(db) as db:
-                chats_by_user = db.query(Chat).filter_by(user_id=user_id).all()
-                shared_chat_ids = [f"shared-{chat.id}" for chat in chats_by_user]
+                shared_chat_ids = [
+                    f"shared-{row[0]}"
+                    for row in db.query(Chat.id).filter_by(user_id=user_id).all()
+                ]
 
                 # Use subquery to delete chat_messages for shared chats
                 shared_id_subq = (

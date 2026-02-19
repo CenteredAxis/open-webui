@@ -41,6 +41,7 @@
 	let dragged = false;
 
 	let minSize = 0;
+	let resizeObserver: ResizeObserver;
 
 	export const openPane = () => {
 		if (parseInt(localStorage?.chatControlsSize)) {
@@ -97,7 +98,7 @@
 		minSize = Math.floor((350 / container.clientWidth) * 100);
 
 		// Create a new ResizeObserver instance
-		const resizeObserver = new ResizeObserver((entries) => {
+		resizeObserver = new ResizeObserver((entries) => {
 			for (let entry of entries) {
 				const width = entry.contentRect.width;
 				// calculate the percentage of 350px
@@ -130,6 +131,7 @@
 	onDestroy(() => {
 		showControls.set(false);
 
+		resizeObserver?.disconnect();
 		mediaQuery.removeEventListener('change', handleMediaQuery);
 		document.removeEventListener('mousedown', onMouseDown);
 		document.removeEventListener('mouseup', onMouseUp);

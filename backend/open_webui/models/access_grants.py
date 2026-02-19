@@ -456,6 +456,30 @@ class AccessGrantsTable:
             )
             return [AccessGrantModel.model_validate(g) for g in grants]
 
+    def get_grants_by_resources(
+        self,
+        resource_type: str,
+        resource_ids: list[str],
+        db: Optional[Session] = None,
+    ) -> list[AccessGrantModel]:
+        """Batch-load all grants for multiple resources in a single query.
+
+        Replaces calling get_grants_by_resource() in a loop (N+1) with
+        a single IN() query. Returns grants for all requested resource IDs.
+        """
+        if not resource_ids:
+            return []
+        with get_db_context(db) as db:
+            grants = (
+                db.query(AccessGrant)
+                .filter(
+                    AccessGrant.resource_type == resource_type,
+                    AccessGrant.resource_id.in_(resource_ids),
+                )
+                .all()
+            )
+            return [AccessGrantModel.model_validate(g) for g in grants]
+
     def has_access(
         self,
         user_id: str,

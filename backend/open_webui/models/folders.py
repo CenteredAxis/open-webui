@@ -133,22 +133,31 @@ class FolderTable:
     ) -> Optional[list[FolderModel]]:
         try:
             with get_db_context(db) as db:
-                folders = []
-
-                def get_children(folder):
-                    children = self.get_folders_by_parent_id_and_user_id(
-                        folder.id, user_id, db=db
-                    )
-                    for child in children:
-                        get_children(child)
-                        folders.append(child)
-
-                folder = db.query(Folder).filter_by(id=id, user_id=user_id).first()
-                if not folder:
+                # Verify the root folder exists
+                if not db.query(Folder).filter_by(id=id, user_id=user_id).first():
                     return None
 
-                get_children(folder)
-                return folders
+                # Single query: all folders owned by this user
+                all_folders = [
+                    FolderModel.model_validate(f)
+                    for f in db.query(Folder).filter_by(user_id=user_id).all()
+                ]
+
+                # Build parent_id → [children] map for O(1) lookup
+                children_map: dict[str, list] = {}
+                for f in all_folders:
+                    children_map.setdefault(f.parent_id, []).append(f)
+
+                # Walk the subtree in Python — no further DB calls
+                result: list[FolderModel] = []
+
+                def collect(folder_id: str) -> None:
+                    for child in children_map.get(folder_id, []):
+                        result.append(child)
+                        collect(child.id)
+
+                collect(id)
+                return result if result else None
         except Exception:
             return None
 
