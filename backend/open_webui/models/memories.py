@@ -3,7 +3,8 @@ import uuid
 from typing import Optional
 
 from sqlalchemy.orm import Session
-from open_webui.internal.db import Base, get_db, get_db_context
+from open_webui.internal.db import Base, get_db_context
+from open_webui.internal.crud import CRUDBase
 from pydantic import BaseModel, ConfigDict
 from sqlalchemy import BigInteger, Column, String, Text
 
@@ -37,33 +38,27 @@ class MemoryModel(BaseModel):
 ####################
 
 
-class MemoriesTable:
+class MemoriesTable(CRUDBase[Memory, MemoryModel]):
+    def __init__(self):
+        super().__init__(Memory, MemoryModel)
+
     def insert_new_memory(
         self,
         user_id: str,
         content: str,
         db: Optional[Session] = None,
     ) -> Optional[MemoryModel]:
-        with get_db_context(db) as db:
-            id = str(uuid.uuid4())
-
-            memory = MemoryModel(
-                **{
-                    "id": id,
-                    "user_id": user_id,
-                    "content": content,
-                    "created_at": int(time.time()),
-                    "updated_at": int(time.time()),
-                }
-            )
-            result = Memory(**memory.model_dump())
-            db.add(result)
-            db.commit()
-            db.refresh(result)
-            if result:
-                return MemoryModel.model_validate(result)
-            else:
-                return None
+        now = int(time.time())
+        return self._insert(
+            {
+                "id": str(uuid.uuid4()),
+                "user_id": user_id,
+                "content": content,
+                "created_at": now,
+                "updated_at": now,
+            },
+            db,
+        )
 
     def update_memory_by_id_and_user_id(
         self,
@@ -95,36 +90,19 @@ class MemoriesTable:
             except Exception:
                 return None
 
+    # one-line wrappers — preserve existing call sites in routers unchanged
     def get_memories_by_user_id(
         self, user_id: str, db: Optional[Session] = None
     ) -> list[MemoryModel]:
-        with get_db_context(db) as db:
-            try:
-                memories = db.query(Memory).filter_by(user_id=user_id).all()
-                return [MemoryModel.model_validate(memory) for memory in memories]
-            except Exception:
-                return None
+        return self.get_by_user_id(user_id, db)
 
     def get_memory_by_id(
         self, id: str, db: Optional[Session] = None
     ) -> Optional[MemoryModel]:
-        with get_db_context(db) as db:
-            try:
-                memory = db.get(Memory, id)
-                return MemoryModel.model_validate(memory)
-            except Exception:
-                return None
+        return self.get_by_id(id, db)
 
     def delete_memory_by_id(self, id: str, db: Optional[Session] = None) -> bool:
-        with get_db_context(db) as db:
-            try:
-                db.query(Memory).filter_by(id=id).delete()
-                db.commit()
-
-                return True
-
-            except Exception:
-                return False
+        return self.delete_by_id(id, db)
 
     def delete_memories_by_user_id(
         self, user_id: str, db: Optional[Session] = None
