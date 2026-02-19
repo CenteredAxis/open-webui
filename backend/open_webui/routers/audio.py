@@ -1,3 +1,4 @@
+import asyncio
 import hashlib
 import json
 import logging
@@ -428,7 +429,7 @@ async def speech(request: Request, user=Depends(get_verified_user)):
     elif request.app.state.config.TTS_ENGINE == "elevenlabs":
         voice_id = payload.get("voice", "")
 
-        if voice_id not in get_available_voices(request):
+        if voice_id not in await asyncio.to_thread(get_available_voices, request):
             raise HTTPException(
                 status_code=400,
                 detail="Invalid voice id",
@@ -1282,7 +1283,7 @@ def get_available_models(request: Request) -> list[dict]:
 
 @router.get("/models")
 async def get_models(request: Request, user=Depends(get_verified_user)):
-    return {"models": get_available_models(request)}
+    return {"models": await asyncio.to_thread(get_available_models, request)}
 
 
 def get_available_voices(request) -> dict:
@@ -1394,6 +1395,9 @@ def get_elevenlabs_voices(api_key: str) -> dict:
 async def get_voices(request: Request, user=Depends(get_verified_user)):
     return {
         "voices": [
-            {"id": k, "name": v} for k, v in get_available_voices(request).items()
+            {"id": k, "name": v}
+            for k, v in (
+                await asyncio.to_thread(get_available_voices, request)
+            ).items()
         ]
     }
