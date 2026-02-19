@@ -83,9 +83,15 @@ from open_webui.utils.sanitize import sanitize_code
 from open_webui.utils.chat import generate_chat_completion
 from open_webui.utils.task import (
     get_task_model_id,
-    rag_template,
     tools_function_calling_generation_template,
 )
+from open_webui.utils.context_builder import (
+    ContextBuilder,
+    ContextSource,
+    apply_source_context_to_messages,
+)
+from open_webui.utils.knowledge_resolver import KnowledgeResolver
+from open_webui.utils.tool_orchestrator import ToolOrchestrator
 from open_webui.utils.misc import (
     deep_update,
     extract_urls,
@@ -132,7 +138,6 @@ from open_webui.env import (
     BYPASS_MODEL_ACCESS_CONTROL,
     ENABLE_REALTIME_CHAT_SAVE,
     ENABLE_QUERIES_CACHE,
-    RAG_SYSTEM_CONTEXT,
     ENABLE_FORWARD_USER_INFO_HEADERS,
     FORWARD_SESSION_INFO_HEADER_CHAT_ID,
     FORWARD_SESSION_INFO_HEADER_MESSAGE_ID,
@@ -804,56 +809,6 @@ def handle_responses_streaming_event(
 
     else:
         return current_output, None
-
-
-def apply_source_context_to_messages(
-    request: Request,
-    messages: list,
-    sources: list,
-    user_message: str,
-) -> list:
-    """
-    Build source context from citation sources and apply to messages.
-    Uses RAG template to format context for model consumption.
-    """
-    if not sources or not user_message:
-        return messages
-
-    context_string = ""
-    citation_idx = {}
-
-    for source in sources:
-        for doc, meta in zip(source.get("document", []), source.get("metadata", [])):
-            src_id = meta.get("source") or source.get("source", {}).get("id") or "N/A"
-            if src_id not in citation_idx:
-                citation_idx[src_id] = len(citation_idx) + 1
-            src_name = source.get("source", {}).get("name")
-            context_string += (
-                f'<source id="{citation_idx[src_id]}"'
-                + (f' name="{src_name}"' if src_name else "")
-                + f">{doc}</source>\n"
-            )
-
-    context_string = context_string.strip()
-    if not context_string:
-        return messages
-
-    if RAG_SYSTEM_CONTEXT:
-        return add_or_update_system_message(
-            rag_template(
-                request.app.state.config.RAG_TEMPLATE, context_string, user_message
-            ),
-            messages,
-            append=True,
-        )
-    else:
-        return add_or_update_user_message(
-            rag_template(
-                request.app.state.config.RAG_TEMPLATE, context_string, user_message
-            ),
-            messages,
-            append=False,
-        )
 
 
 def process_tool_result(
@@ -2112,52 +2067,15 @@ async def process_chat_payload(request, form_data, user, metadata, model):
                         *form_data.get("files", []),
                     ]
 
-    # Model "Knowledge" handling
-    user_message = get_last_user_message(form_data["messages"])
-    model_knowledge = model.get("info", {}).get("meta", {}).get("knowledge", False)
-
-    if (
-        model_knowledge
-        and metadata.get("params", {}).get("function_calling") != "native"
-    ):
-        await event_emitter(
-            {
-                "type": "status",
-                "data": {
-                    "action": "knowledge_search",
-                    "query": user_message,
-                    "done": False,
-                },
-            }
-        )
-
-        knowledge_files = []
-        for item in model_knowledge:
-            if item.get("collection_name"):
-                knowledge_files.append(
-                    {
-                        "id": item.get("collection_name"),
-                        "name": item.get("name"),
-                        "legacy": True,
-                    }
-                )
-            elif item.get("collection_names"):
-                knowledge_files.append(
-                    {
-                        "name": item.get("name"),
-                        "type": "collection",
-                        "collection_names": item.get("collection_names"),
-                        "legacy": True,
-                    }
-                )
-            else:
-                knowledge_files.append(item)
-
-        files = form_data.get("files", [])
-        files.extend(knowledge_files)
-        form_data["files"] = files
-
-        _context_note_knowledge(user, [item.get("name") for item in model_knowledge])
+    # Knowledge Resolution — resolves model-attached knowledge bases into file specs.
+    # KnowledgeResolver emits the knowledge_search status event and records
+    # signals as side effects. The returned specs extend form_data["files"]
+    # so the existing chat_completion_files_handler picks them up unchanged.
+    knowledge_files = await KnowledgeResolver(
+        form_data, model, metadata, user, event_emitter
+    ).resolve()
+    if knowledge_files:
+        form_data["files"] = form_data.get("files", []) + knowledge_files
 
     variables = form_data.pop("variables", None)
 
@@ -2525,24 +2443,15 @@ async def process_chat_payload(request, form_data, user, metadata, model):
             if name not in tools_dict:
                 tools_dict[name] = tool_dict
 
-    if tools_dict:
-        if metadata.get("params", {}).get("function_calling") == "native":
-            # If the function calling is native, then call the tools function calling handler
-            metadata["tools"] = tools_dict
-            form_data["tools"] = [
-                {"type": "function", "function": tool.get("spec", {})}
-                for tool in tools_dict.values()
-            ]
-
-        else:
-            # If the function calling is not native, then call the tools function calling handler
-            try:
-                form_data, flags = await chat_completion_tools_handler(
-                    request, form_data, extra_params, user, models, tools_dict
-                )
-                sources.extend(flags.get("sources", []))
-            except Exception as e:
-                log.exception(e)
+    # Tool Orchestration — decides between native FC and handler-based tool calling.
+    # ToolOrchestrator owns the native vs. handler decision, applies the right setup,
+    # and returns sources collected during handler-based execution.
+    tool_res = await ToolOrchestrator(
+        request, form_data, extra_params, user, models, metadata, tools_dict
+    ).resolve()
+    form_data = tool_res.form_data
+    metadata = tool_res.metadata
+    sources.extend(tool_res.sources)
 
     # Check if file context extraction is enabled for this model (default True)
     file_context_enabled = (
