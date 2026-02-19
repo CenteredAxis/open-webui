@@ -1,485 +1,63 @@
 import { WEBUI_API_BASE_URL } from '$lib/constants';
+import { apiFetch } from '$lib/utils/api';
 
-export const createNewTool = async (token: string, tool: object) => {
-	let error = null;
+export const createNewTool = (token: string, tool: object) =>
+	apiFetch(`${WEBUI_API_BASE_URL}/tools/create`, { method: 'POST', token, body: { ...tool } });
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/tools/create`, {
+export const loadToolByUrl = (token: string = '', url: string) =>
+	apiFetch(`${WEBUI_API_BASE_URL}/tools/load/url`, { method: 'POST', token, body: { url } });
+
+export const getTools = (token: string = '') =>
+	apiFetch(`${WEBUI_API_BASE_URL}/tools/`, { token });
+
+export const getToolList = (token: string = '') =>
+	apiFetch(`${WEBUI_API_BASE_URL}/tools/list`, { token });
+
+export const exportTools = (token: string = '') =>
+	apiFetch(`${WEBUI_API_BASE_URL}/tools/export`, { token });
+
+export const getToolById = (token: string, id: string) =>
+	apiFetch(`${WEBUI_API_BASE_URL}/tools/id/${id}`, { token });
+
+export const updateToolById = (token: string, id: string, tool: object) =>
+	apiFetch(`${WEBUI_API_BASE_URL}/tools/id/${id}/update`, {
 		method: 'POST',
-		headers: {
-			Accept: 'application/json',
-			'Content-Type': 'application/json',
-			authorization: `Bearer ${token}`
-		},
-		body: JSON.stringify({
-			...tool
-		})
-	})
-		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
-		})
-		.catch((err) => {
-			error = err.detail;
-			console.error(err);
-			return null;
-		});
+		token,
+		body: { ...tool }
+	});
 
-	if (error) {
-		throw error;
-	}
-
-	return res;
-};
-
-export const loadToolByUrl = async (token: string = '', url: string) => {
-	let error = null;
-
-	const res = await fetch(`${WEBUI_API_BASE_URL}/tools/load/url`, {
+export const updateToolAccessGrants = (token: string, id: string, accessGrants: any[]) =>
+	apiFetch(`${WEBUI_API_BASE_URL}/tools/id/${id}/access/update`, {
 		method: 'POST',
-		headers: {
-			Accept: 'application/json',
-			'Content-Type': 'application/json',
-			authorization: `Bearer ${token}`
-		},
-		body: JSON.stringify({
-			url
-		})
-	})
-		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
-		})
-		.then((json) => {
-			return json;
-		})
-		.catch((err) => {
-			error = err.detail;
-			console.error(err);
-			return null;
-		});
+		token,
+		body: { access_grants: accessGrants }
+	});
 
-	if (error) {
-		throw error;
-	}
+export const deleteToolById = (token: string, id: string) =>
+	apiFetch(`${WEBUI_API_BASE_URL}/tools/id/${id}/delete`, { method: 'DELETE', token });
 
-	return res;
-};
+export const getToolValvesById = (token: string, id: string) =>
+	apiFetch(`${WEBUI_API_BASE_URL}/tools/id/${id}/valves`, { token });
 
-export const getTools = async (token: string = '') => {
-	let error = null;
+export const getToolValvesSpecById = (token: string, id: string) =>
+	apiFetch(`${WEBUI_API_BASE_URL}/tools/id/${id}/valves/spec`, { token });
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/tools/`, {
-		method: 'GET',
-		headers: {
-			Accept: 'application/json',
-			'Content-Type': 'application/json',
-			authorization: `Bearer ${token}`
-		}
-	})
-		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
-		})
-		.then((json) => {
-			return json;
-		})
-		.catch((err) => {
-			error = err.detail;
-			console.error(err);
-			return null;
-		});
-
-	if (error) {
-		throw error;
-	}
-
-	return res;
-};
-
-export const getToolList = async (token: string = '') => {
-	let error = null;
-
-	const res = await fetch(`${WEBUI_API_BASE_URL}/tools/list`, {
-		method: 'GET',
-		headers: {
-			Accept: 'application/json',
-			'Content-Type': 'application/json',
-			authorization: `Bearer ${token}`
-		}
-	})
-		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
-		})
-		.then((json) => {
-			return json;
-		})
-		.catch((err) => {
-			error = err.detail;
-			console.error(err);
-			return null;
-		});
-
-	if (error) {
-		throw error;
-	}
-
-	return res;
-};
-
-export const exportTools = async (token: string = '') => {
-	let error = null;
-
-	const res = await fetch(`${WEBUI_API_BASE_URL}/tools/export`, {
-		method: 'GET',
-		headers: {
-			Accept: 'application/json',
-			'Content-Type': 'application/json',
-			authorization: `Bearer ${token}`
-		}
-	})
-		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
-		})
-		.then((json) => {
-			return json;
-		})
-		.catch((err) => {
-			error = err.detail;
-			console.error(err);
-			return null;
-		});
-
-	if (error) {
-		throw error;
-	}
-
-	return res;
-};
-
-export const getToolById = async (token: string, id: string) => {
-	let error = null;
-
-	const res = await fetch(`${WEBUI_API_BASE_URL}/tools/id/${id}`, {
-		method: 'GET',
-		headers: {
-			Accept: 'application/json',
-			'Content-Type': 'application/json',
-			authorization: `Bearer ${token}`
-		}
-	})
-		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
-		})
-		.then((json) => {
-			return json;
-		})
-		.catch((err) => {
-			error = err.detail;
-
-			console.error(err);
-			return null;
-		});
-
-	if (error) {
-		throw error;
-	}
-
-	return res;
-};
-
-export const updateToolById = async (token: string, id: string, tool: object) => {
-	let error = null;
-
-	const res = await fetch(`${WEBUI_API_BASE_URL}/tools/id/${id}/update`, {
+export const updateToolValvesById = (token: string, id: string, valves: object) =>
+	apiFetch(`${WEBUI_API_BASE_URL}/tools/id/${id}/valves/update`, {
 		method: 'POST',
-		headers: {
-			Accept: 'application/json',
-			'Content-Type': 'application/json',
-			authorization: `Bearer ${token}`
-		},
-		body: JSON.stringify({
-			...tool
-		})
-	})
-		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
-		})
-		.then((json) => {
-			return json;
-		})
-		.catch((err) => {
-			error = err.detail;
+		token,
+		body: { ...valves }
+	});
 
-			console.error(err);
-			return null;
-		});
+export const getUserValvesById = (token: string, id: string) =>
+	apiFetch(`${WEBUI_API_BASE_URL}/tools/id/${id}/valves/user`, { token });
 
-	if (error) {
-		throw error;
-	}
+export const getUserValvesSpecById = (token: string, id: string) =>
+	apiFetch(`${WEBUI_API_BASE_URL}/tools/id/${id}/valves/user/spec`, { token });
 
-	return res;
-};
-
-export const updateToolAccessGrants = async (token: string, id: string, accessGrants: any[]) => {
-	let error = null;
-
-	const res = await fetch(`${WEBUI_API_BASE_URL}/tools/id/${id}/access/update`, {
+export const updateUserValvesById = (token: string, id: string, valves: object) =>
+	apiFetch(`${WEBUI_API_BASE_URL}/tools/id/${id}/valves/user/update`, {
 		method: 'POST',
-		headers: {
-			Accept: 'application/json',
-			'Content-Type': 'application/json',
-			authorization: `Bearer ${token}`
-		},
-		body: JSON.stringify({ access_grants: accessGrants })
-	})
-		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
-		})
-		.catch((err) => {
-			error = err.detail;
-			console.error(err);
-			return null;
-		});
-
-	if (error) {
-		throw error;
-	}
-
-	return res;
-};
-
-export const deleteToolById = async (token: string, id: string) => {
-	let error = null;
-
-	const res = await fetch(`${WEBUI_API_BASE_URL}/tools/id/${id}/delete`, {
-		method: 'DELETE',
-		headers: {
-			Accept: 'application/json',
-			'Content-Type': 'application/json',
-			authorization: `Bearer ${token}`
-		}
-	})
-		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
-		})
-		.then((json) => {
-			return json;
-		})
-		.catch((err) => {
-			error = err.detail;
-
-			console.error(err);
-			return null;
-		});
-
-	if (error) {
-		throw error;
-	}
-
-	return res;
-};
-
-export const getToolValvesById = async (token: string, id: string) => {
-	let error = null;
-
-	const res = await fetch(`${WEBUI_API_BASE_URL}/tools/id/${id}/valves`, {
-		method: 'GET',
-		headers: {
-			Accept: 'application/json',
-			'Content-Type': 'application/json',
-			authorization: `Bearer ${token}`
-		}
-	})
-		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
-		})
-		.then((json) => {
-			return json;
-		})
-		.catch((err) => {
-			error = err.detail;
-
-			console.error(err);
-			return null;
-		});
-
-	if (error) {
-		throw error;
-	}
-
-	return res;
-};
-
-export const getToolValvesSpecById = async (token: string, id: string) => {
-	let error = null;
-
-	const res = await fetch(`${WEBUI_API_BASE_URL}/tools/id/${id}/valves/spec`, {
-		method: 'GET',
-		headers: {
-			Accept: 'application/json',
-			'Content-Type': 'application/json',
-			authorization: `Bearer ${token}`
-		}
-	})
-		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
-		})
-		.then((json) => {
-			return json;
-		})
-		.catch((err) => {
-			error = err.detail;
-
-			console.error(err);
-			return null;
-		});
-
-	if (error) {
-		throw error;
-	}
-
-	return res;
-};
-
-export const updateToolValvesById = async (token: string, id: string, valves: object) => {
-	let error = null;
-
-	const res = await fetch(`${WEBUI_API_BASE_URL}/tools/id/${id}/valves/update`, {
-		method: 'POST',
-		headers: {
-			Accept: 'application/json',
-			'Content-Type': 'application/json',
-			authorization: `Bearer ${token}`
-		},
-		body: JSON.stringify({
-			...valves
-		})
-	})
-		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
-		})
-		.then((json) => {
-			return json;
-		})
-		.catch((err) => {
-			error = err.detail;
-
-			console.error(err);
-			return null;
-		});
-
-	if (error) {
-		throw error;
-	}
-
-	return res;
-};
-
-export const getUserValvesById = async (token: string, id: string) => {
-	let error = null;
-
-	const res = await fetch(`${WEBUI_API_BASE_URL}/tools/id/${id}/valves/user`, {
-		method: 'GET',
-		headers: {
-			Accept: 'application/json',
-			'Content-Type': 'application/json',
-			authorization: `Bearer ${token}`
-		}
-	})
-		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
-		})
-		.then((json) => {
-			return json;
-		})
-		.catch((err) => {
-			error = err.detail;
-
-			console.error(err);
-			return null;
-		});
-
-	if (error) {
-		throw error;
-	}
-
-	return res;
-};
-
-export const getUserValvesSpecById = async (token: string, id: string) => {
-	let error = null;
-
-	const res = await fetch(`${WEBUI_API_BASE_URL}/tools/id/${id}/valves/user/spec`, {
-		method: 'GET',
-		headers: {
-			Accept: 'application/json',
-			'Content-Type': 'application/json',
-			authorization: `Bearer ${token}`
-		}
-	})
-		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
-		})
-		.then((json) => {
-			return json;
-		})
-		.catch((err) => {
-			error = err.detail;
-
-			console.error(err);
-			return null;
-		});
-
-	if (error) {
-		throw error;
-	}
-
-	return res;
-};
-
-export const updateUserValvesById = async (token: string, id: string, valves: object) => {
-	let error = null;
-
-	const res = await fetch(`${WEBUI_API_BASE_URL}/tools/id/${id}/valves/user/update`, {
-		method: 'POST',
-		headers: {
-			Accept: 'application/json',
-			'Content-Type': 'application/json',
-			authorization: `Bearer ${token}`
-		},
-		body: JSON.stringify({
-			...valves
-		})
-	})
-		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
-		})
-		.then((json) => {
-			return json;
-		})
-		.catch((err) => {
-			error = err.detail;
-
-			console.error(err);
-			return null;
-		});
-
-	if (error) {
-		throw error;
-	}
-
-	return res;
-};
+		token,
+		body: { ...valves }
+	});

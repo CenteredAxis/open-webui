@@ -1,4 +1,5 @@
 import { WEBUI_API_BASE_URL } from '$lib/constants';
+import { apiFetch } from '$lib/utils/api';
 
 type ChannelForm = {
 	type?: string;
@@ -11,132 +12,23 @@ type ChannelForm = {
 	user_ids?: string[];
 };
 
-export const createNewChannel = async (token: string = '', channel: ChannelForm) => {
-	let error = null;
-
-	const res = await fetch(`${WEBUI_API_BASE_URL}/channels/create`, {
+export const createNewChannel = (token: string = '', channel: ChannelForm) =>
+	apiFetch(`${WEBUI_API_BASE_URL}/channels/create`, {
 		method: 'POST',
-		headers: {
-			Accept: 'application/json',
-			'Content-Type': 'application/json',
-			authorization: `Bearer ${token}`
-		},
-		body: JSON.stringify({ ...channel })
-	})
-		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
-		})
-		.then((json) => {
-			return json;
-		})
-		.catch((err) => {
-			error = err.detail;
-			console.error(err);
-			return null;
-		});
+		token: token || undefined,
+		body: { ...channel } as Record<string, unknown>
+	});
 
-	if (error) {
-		throw error;
-	}
+export const getChannels = (token: string = '') =>
+	apiFetch(`${WEBUI_API_BASE_URL}/channels/`, { token: token || undefined });
 
-	return res;
-};
+export const getChannelById = (token: string = '', channel_id: string) =>
+	apiFetch(`${WEBUI_API_BASE_URL}/channels/${channel_id}`, { token: token || undefined });
 
-export const getChannels = async (token: string = '') => {
-	let error = null;
+export const getDMChannelByUserId = (token: string = '', user_id: string) =>
+	apiFetch(`${WEBUI_API_BASE_URL}/channels/users/${user_id}`, { token: token || undefined });
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/channels/`, {
-		method: 'GET',
-		headers: {
-			Accept: 'application/json',
-			'Content-Type': 'application/json',
-			authorization: `Bearer ${token}`
-		}
-	})
-		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
-		})
-		.then((json) => {
-			return json;
-		})
-		.catch((err) => {
-			error = err.detail;
-			console.error(err);
-			return null;
-		});
-
-	if (error) {
-		throw error;
-	}
-
-	return res;
-};
-
-export const getChannelById = async (token: string = '', channel_id: string) => {
-	let error = null;
-
-	const res = await fetch(`${WEBUI_API_BASE_URL}/channels/${channel_id}`, {
-		method: 'GET',
-		headers: {
-			Accept: 'application/json',
-			'Content-Type': 'application/json',
-			authorization: `Bearer ${token}`
-		}
-	})
-		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
-		})
-		.then((json) => {
-			return json;
-		})
-		.catch((err) => {
-			error = err.detail;
-			console.error(err);
-			return null;
-		});
-
-	if (error) {
-		throw error;
-	}
-
-	return res;
-};
-
-export const getDMChannelByUserId = async (token: string = '', user_id: string) => {
-	let error = null;
-
-	const res = await fetch(`${WEBUI_API_BASE_URL}/channels/users/${user_id}`, {
-		method: 'GET',
-		headers: {
-			Accept: 'application/json',
-			'Content-Type': 'application/json',
-			authorization: `Bearer ${token}`
-		}
-	})
-		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
-		})
-		.then((json) => {
-			return json;
-		})
-		.catch((err) => {
-			error = err.detail;
-			console.error(err);
-			return null;
-		});
-
-	if (error) {
-		throw error;
-	}
-
-	return res;
-};
-
-export const getChannelMembersById = async (
+export const getChannelMembersById = (
 	token: string,
 	channel_id: string,
 	query?: string,
@@ -144,9 +36,6 @@ export const getChannelMembersById = async (
 	direction?: string,
 	page = 1
 ) => {
-	let error = null;
-	let res = null;
-
 	const searchParams = new URLSearchParams();
 
 	searchParams.set('page', `${page}`);
@@ -163,372 +52,114 @@ export const getChannelMembersById = async (
 		searchParams.set('direction', direction);
 	}
 
-	res = await fetch(
+	return apiFetch(
 		`${WEBUI_API_BASE_URL}/channels/${channel_id}/members?${searchParams.toString()}`,
-		{
-			method: 'GET',
-			headers: {
-				'Content-Type': 'application/json',
-				Authorization: `Bearer ${token}`
-			}
-		}
-	)
-		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
-		})
-		.catch((err) => {
-			console.error(err);
-			error = err.detail;
-			return null;
-		});
-
-	if (error) {
-		throw error;
-	}
-
-	return res;
+		{ token }
+	);
 };
 
-export const updateChannelMemberActiveStatusById = async (
+export const updateChannelMemberActiveStatusById = (
 	token: string = '',
 	channel_id: string,
 	is_active: boolean
-) => {
-	let error = null;
-
-	const res = await fetch(`${WEBUI_API_BASE_URL}/channels/${channel_id}/members/active`, {
+) =>
+	apiFetch(`${WEBUI_API_BASE_URL}/channels/${channel_id}/members/active`, {
 		method: 'POST',
-		headers: {
-			Accept: 'application/json',
-			'Content-Type': 'application/json',
-			authorization: `Bearer ${token}`
-		},
-		body: JSON.stringify({ is_active })
-	})
-		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
-		})
-		.then((json) => {
-			return json;
-		})
-		.catch((err) => {
-			error = err.detail;
-			console.error(err);
-			return null;
-		});
-
-	if (error) {
-		throw error;
-	}
-
-	return res;
-};
+		token: token || undefined,
+		body: { is_active }
+	});
 
 type UpdateMembersForm = {
 	user_ids?: string[];
 	group_ids?: string[];
 };
 
-export const addMembersById = async (
+export const addMembersById = (
 	token: string = '',
 	channel_id: string,
 	formData: UpdateMembersForm
-) => {
-	let error = null;
-
-	const res = await fetch(`${WEBUI_API_BASE_URL}/channels/${channel_id}/update/members/add`, {
+) =>
+	apiFetch(`${WEBUI_API_BASE_URL}/channels/${channel_id}/update/members/add`, {
 		method: 'POST',
-		headers: {
-			Accept: 'application/json',
-			'Content-Type': 'application/json',
-			authorization: `Bearer ${token}`
-		},
-		body: JSON.stringify({ ...formData })
-	})
-		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
-		})
-		.then((json) => {
-			return json;
-		})
-		.catch((err) => {
-			error = err.detail;
-			console.error(err);
-			return null;
-		});
-
-	if (error) {
-		throw error;
-	}
-
-	return res;
-};
+		token: token || undefined,
+		body: { ...formData }
+	});
 
 type RemoveMembersForm = {
 	user_ids?: string[];
 	group_ids?: string[];
 };
 
-export const removeMembersById = async (
+export const removeMembersById = (
 	token: string = '',
 	channel_id: string,
 	formData: RemoveMembersForm
-) => {
-	let error = null;
-
-	const res = await fetch(`${WEBUI_API_BASE_URL}/channels/${channel_id}/update/members/remove`, {
+) =>
+	apiFetch(`${WEBUI_API_BASE_URL}/channels/${channel_id}/update/members/remove`, {
 		method: 'POST',
-		headers: {
-			Accept: 'application/json',
-			'Content-Type': 'application/json',
-			authorization: `Bearer ${token}`
-		},
-		body: JSON.stringify({ ...formData })
-	})
-		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
-		})
-		.then((json) => {
-			return json;
-		})
-		.catch((err) => {
-			error = err.detail;
-			console.error(err);
-			return null;
-		});
+		token: token || undefined,
+		body: { ...formData }
+	});
 
-	if (error) {
-		throw error;
-	}
-
-	return res;
-};
-
-export const updateChannelById = async (
+export const updateChannelById = (
 	token: string = '',
 	channel_id: string,
 	channel: ChannelForm
-) => {
-	let error = null;
-
-	const res = await fetch(`${WEBUI_API_BASE_URL}/channels/${channel_id}/update`, {
+) =>
+	apiFetch(`${WEBUI_API_BASE_URL}/channels/${channel_id}/update`, {
 		method: 'POST',
-		headers: {
-			Accept: 'application/json',
-			'Content-Type': 'application/json',
-			authorization: `Bearer ${token}`
-		},
-		body: JSON.stringify({ ...channel })
-	})
-		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
-		})
-		.then((json) => {
-			return json;
-		})
-		.catch((err) => {
-			error = err.detail;
-			console.error(err);
-			return null;
-		});
+		token: token || undefined,
+		body: { ...channel } as Record<string, unknown>
+	});
 
-	if (error) {
-		throw error;
-	}
-
-	return res;
-};
-
-export const deleteChannelById = async (token: string = '', channel_id: string) => {
-	let error = null;
-
-	const res = await fetch(`${WEBUI_API_BASE_URL}/channels/${channel_id}/delete`, {
+export const deleteChannelById = (token: string = '', channel_id: string) =>
+	apiFetch(`${WEBUI_API_BASE_URL}/channels/${channel_id}/delete`, {
 		method: 'DELETE',
-		headers: {
-			Accept: 'application/json',
-			'Content-Type': 'application/json',
-			authorization: `Bearer ${token}`
-		}
-	})
-		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
-		})
-		.then((json) => {
-			return json;
-		})
-		.catch((err) => {
-			error = err.detail;
-			console.error(err);
-			return null;
-		});
+		token: token || undefined
+	});
 
-	if (error) {
-		throw error;
-	}
-
-	return res;
-};
-
-export const getChannelMessages = async (
+export const getChannelMessages = (
 	token: string = '',
 	channel_id: string,
 	skip: number = 0,
 	limit: number = 50
-) => {
-	let error = null;
-
-	const res = await fetch(
+) =>
+	apiFetch(
 		`${WEBUI_API_BASE_URL}/channels/${channel_id}/messages?skip=${skip}&limit=${limit}`,
-		{
-			method: 'GET',
-			headers: {
-				Accept: 'application/json',
-				'Content-Type': 'application/json',
-				authorization: `Bearer ${token}`
-			}
-		}
-	)
-		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
-		})
-		.then((json) => {
-			return json;
-		})
-		.catch((err) => {
-			error = err.detail;
-			console.error(err);
-			return null;
-		});
+		{ token: token || undefined }
+	);
 
-	if (error) {
-		throw error;
-	}
-
-	return res;
-};
-
-export const getChannelPinnedMessages = async (
+export const getChannelPinnedMessages = (
 	token: string = '',
 	channel_id: string,
 	page: number = 1
-) => {
-	let error = null;
-
-	const res = await fetch(
+) =>
+	apiFetch(
 		`${WEBUI_API_BASE_URL}/channels/${channel_id}/messages/pinned?page=${page}`,
-		{
-			method: 'GET',
-			headers: {
-				Accept: 'application/json',
-				'Content-Type': 'application/json',
-				authorization: `Bearer ${token}`
-			}
-		}
-	)
-		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
-		})
-		.then((json) => {
-			return json;
-		})
-		.catch((err) => {
-			error = err.detail;
-			console.error(err);
-			return null;
-		});
+		{ token: token || undefined }
+	);
 
-	if (error) {
-		throw error;
-	}
-
-	return res;
-};
-
-export const getChannelThreadMessages = async (
+export const getChannelThreadMessages = (
 	token: string = '',
 	channel_id: string,
 	message_id: string,
 	skip: number = 0,
 	limit: number = 50
-) => {
-	let error = null;
-
-	const res = await fetch(
+) =>
+	apiFetch(
 		`${WEBUI_API_BASE_URL}/channels/${channel_id}/messages/${message_id}/thread?skip=${skip}&limit=${limit}`,
-		{
-			method: 'GET',
-			headers: {
-				Accept: 'application/json',
-				'Content-Type': 'application/json',
-				authorization: `Bearer ${token}`
-			}
-		}
-	)
-		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
-		})
-		.then((json) => {
-			return json;
-		})
-		.catch((err) => {
-			error = err.detail;
-			console.error(err);
-			return null;
-		});
+		{ token: token || undefined }
+	);
 
-	if (error) {
-		throw error;
-	}
-
-	return res;
-};
-
-export const getMessageData = async (
+export const getMessageData = (
 	token: string = '',
 	channel_id: string,
 	message_id: string
-) => {
-	let error = null;
-
-	const res = await fetch(
+) =>
+	apiFetch(
 		`${WEBUI_API_BASE_URL}/channels/${channel_id}/messages/${message_id}/data`,
-		{
-			method: 'GET',
-			headers: {
-				Accept: 'application/json',
-				'Content-Type': 'application/json',
-				authorization: `Bearer ${token}`
-			}
-		}
-	)
-		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
-		})
-		.then((json) => {
-			return json;
-		})
-		.catch((err) => {
-			error = err.detail;
-			console.error(err);
-			return null;
-		});
-
-	if (error) {
-		throw error;
-	}
-
-	return res;
-};
+		{ token: token || undefined }
+	);
 
 type MessageForm = {
 	temp_id?: string;
@@ -539,231 +170,72 @@ type MessageForm = {
 	meta?: object;
 };
 
-export const sendMessage = async (token: string = '', channel_id: string, message: MessageForm) => {
-	let error = null;
-
-	const res = await fetch(`${WEBUI_API_BASE_URL}/channels/${channel_id}/messages/post`, {
+export const sendMessage = (token: string = '', channel_id: string, message: MessageForm) =>
+	apiFetch(`${WEBUI_API_BASE_URL}/channels/${channel_id}/messages/post`, {
 		method: 'POST',
-		headers: {
-			Accept: 'application/json',
-			'Content-Type': 'application/json',
-			authorization: `Bearer ${token}`
-		},
-		body: JSON.stringify({ ...message })
-	})
-		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
-		})
-		.then((json) => {
-			return json;
-		})
-		.catch((err) => {
-			error = err.detail;
-			console.error(err);
-			return null;
-		});
+		token: token || undefined,
+		body: { ...message } as Record<string, unknown>
+	});
 
-	if (error) {
-		throw error;
-	}
-
-	return res;
-};
-
-export const pinMessage = async (
+export const pinMessage = (
 	token: string = '',
 	channel_id: string,
 	message_id: string,
 	is_pinned: boolean
-) => {
-	let error = null;
+) =>
+	apiFetch(`${WEBUI_API_BASE_URL}/channels/${channel_id}/messages/${message_id}/pin`, {
+		method: 'POST',
+		token: token || undefined,
+		body: { is_pinned }
+	});
 
-	const res = await fetch(
-		`${WEBUI_API_BASE_URL}/channels/${channel_id}/messages/${message_id}/pin`,
-		{
-			method: 'POST',
-			headers: {
-				Accept: 'application/json',
-				'Content-Type': 'application/json',
-				authorization: `Bearer ${token}`
-			},
-			body: JSON.stringify({ is_pinned })
-		}
-	)
-		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
-		})
-		.then((json) => {
-			return json;
-		})
-		.catch((err) => {
-			error = err.detail;
-			console.error(err);
-			return null;
-		});
-
-	if (error) {
-		throw error;
-	}
-
-	return res;
-};
-
-export const updateMessage = async (
+export const updateMessage = (
 	token: string = '',
 	channel_id: string,
 	message_id: string,
 	message: MessageForm
-) => {
-	let error = null;
+) =>
+	apiFetch(`${WEBUI_API_BASE_URL}/channels/${channel_id}/messages/${message_id}/update`, {
+		method: 'POST',
+		token: token || undefined,
+		body: { ...message } as Record<string, unknown>
+	});
 
-	const res = await fetch(
-		`${WEBUI_API_BASE_URL}/channels/${channel_id}/messages/${message_id}/update`,
-		{
-			method: 'POST',
-			headers: {
-				Accept: 'application/json',
-				'Content-Type': 'application/json',
-				authorization: `Bearer ${token}`
-			},
-			body: JSON.stringify({ ...message })
-		}
-	)
-		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
-		})
-		.then((json) => {
-			return json;
-		})
-		.catch((err) => {
-			error = err.detail;
-			console.error(err);
-			return null;
-		});
-
-	if (error) {
-		throw error;
-	}
-
-	return res;
-};
-
-export const addReaction = async (
+export const addReaction = (
 	token: string = '',
 	channel_id: string,
 	message_id: string,
 	name: string
-) => {
-	let error = null;
-
-	const res = await fetch(
+) =>
+	apiFetch(
 		`${WEBUI_API_BASE_URL}/channels/${channel_id}/messages/${message_id}/reactions/add`,
 		{
 			method: 'POST',
-			headers: {
-				Accept: 'application/json',
-				'Content-Type': 'application/json',
-				authorization: `Bearer ${token}`
-			},
-			body: JSON.stringify({ name })
+			token: token || undefined,
+			body: { name }
 		}
-	)
-		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
-		})
-		.then((json) => {
-			return json;
-		})
-		.catch((err) => {
-			error = err.detail;
-			console.error(err);
-			return null;
-		});
+	);
 
-	if (error) {
-		throw error;
-	}
-
-	return res;
-};
-
-export const removeReaction = async (
+export const removeReaction = (
 	token: string = '',
 	channel_id: string,
 	message_id: string,
 	name: string
-) => {
-	let error = null;
-
-	const res = await fetch(
+) =>
+	apiFetch(
 		`${WEBUI_API_BASE_URL}/channels/${channel_id}/messages/${message_id}/reactions/remove`,
 		{
 			method: 'POST',
-			headers: {
-				Accept: 'application/json',
-				'Content-Type': 'application/json',
-				authorization: `Bearer ${token}`
-			},
-			body: JSON.stringify({ name })
+			token: token || undefined,
+			body: { name }
 		}
-	)
-		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
-		})
-		.then((json) => {
-			return json;
-		})
-		.catch((err) => {
-			error = err.detail;
-			console.error(err);
-			return null;
-		});
+	);
 
-	if (error) {
-		throw error;
-	}
-
-	return res;
-};
-
-export const deleteMessage = async (token: string = '', channel_id: string, message_id: string) => {
-	let error = null;
-
-	const res = await fetch(
-		`${WEBUI_API_BASE_URL}/channels/${channel_id}/messages/${message_id}/delete`,
-		{
-			method: 'DELETE',
-			headers: {
-				Accept: 'application/json',
-				'Content-Type': 'application/json',
-				authorization: `Bearer ${token}`
-			}
-		}
-	)
-		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
-		})
-		.then((json) => {
-			return json;
-		})
-		.catch((err) => {
-			error = err.detail;
-			console.error(err);
-			return null;
-		});
-
-	if (error) {
-		throw error;
-	}
-
-	return res;
-};
+export const deleteMessage = (token: string = '', channel_id: string, message_id: string) =>
+	apiFetch(`${WEBUI_API_BASE_URL}/channels/${channel_id}/messages/${message_id}/delete`, {
+		method: 'DELETE',
+		token: token || undefined
+	});
 
 // Webhook API functions
 
@@ -772,147 +244,40 @@ type WebhookForm = {
 	profile_image_url?: string;
 };
 
-export const getChannelWebhooks = async (token: string = '', channel_id: string) => {
-	let error = null;
+export const getChannelWebhooks = (token: string = '', channel_id: string) =>
+	apiFetch(`${WEBUI_API_BASE_URL}/channels/${channel_id}/webhooks`, {
+		token: token || undefined
+	});
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/channels/${channel_id}/webhooks`, {
-		method: 'GET',
-		headers: {
-			Accept: 'application/json',
-			'Content-Type': 'application/json',
-			authorization: `Bearer ${token}`
-		}
-	})
-		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
-		})
-		.then((json) => {
-			return json;
-		})
-		.catch((err) => {
-			error = err.detail;
-			console.error(err);
-			return null;
-		});
-
-	if (error) {
-		throw error;
-	}
-
-	return res;
-};
-
-export const createChannelWebhook = async (
+export const createChannelWebhook = (
 	token: string = '',
 	channel_id: string,
 	formData: WebhookForm
-) => {
-	let error = null;
-
-	const res = await fetch(`${WEBUI_API_BASE_URL}/channels/${channel_id}/webhooks/create`, {
+) =>
+	apiFetch(`${WEBUI_API_BASE_URL}/channels/${channel_id}/webhooks/create`, {
 		method: 'POST',
-		headers: {
-			Accept: 'application/json',
-			'Content-Type': 'application/json',
-			authorization: `Bearer ${token}`
-		},
-		body: JSON.stringify({ ...formData })
-	})
-		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
-		})
-		.then((json) => {
-			return json;
-		})
-		.catch((err) => {
-			error = err.detail;
-			console.error(err);
-			return null;
-		});
+		token: token || undefined,
+		body: { ...formData }
+	});
 
-	if (error) {
-		throw error;
-	}
-
-	return res;
-};
-
-export const updateChannelWebhook = async (
+export const updateChannelWebhook = (
 	token: string = '',
 	channel_id: string,
 	webhook_id: string,
 	formData: WebhookForm
-) => {
-	let error = null;
+) =>
+	apiFetch(`${WEBUI_API_BASE_URL}/channels/${channel_id}/webhooks/${webhook_id}/update`, {
+		method: 'POST',
+		token: token || undefined,
+		body: { ...formData }
+	});
 
-	const res = await fetch(
-		`${WEBUI_API_BASE_URL}/channels/${channel_id}/webhooks/${webhook_id}/update`,
-		{
-			method: 'POST',
-			headers: {
-				Accept: 'application/json',
-				'Content-Type': 'application/json',
-				authorization: `Bearer ${token}`
-			},
-			body: JSON.stringify({ ...formData })
-		}
-	)
-		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
-		})
-		.then((json) => {
-			return json;
-		})
-		.catch((err) => {
-			error = err.detail;
-			console.error(err);
-			return null;
-		});
-
-	if (error) {
-		throw error;
-	}
-
-	return res;
-};
-
-export const deleteChannelWebhook = async (
+export const deleteChannelWebhook = (
 	token: string = '',
 	channel_id: string,
 	webhook_id: string
-) => {
-	let error = null;
-
-	const res = await fetch(
-		`${WEBUI_API_BASE_URL}/channels/${channel_id}/webhooks/${webhook_id}/delete`,
-		{
-			method: 'DELETE',
-			headers: {
-				Accept: 'application/json',
-				'Content-Type': 'application/json',
-				authorization: `Bearer ${token}`
-			}
-		}
-	)
-		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
-		})
-		.then((json) => {
-			return json;
-		})
-		.catch((err) => {
-			error = err.detail;
-			console.error(err);
-			return null;
-		});
-
-	if (error) {
-		throw error;
-	}
-
-	return res;
-};
+) =>
+	apiFetch(`${WEBUI_API_BASE_URL}/channels/${channel_id}/webhooks/${webhook_id}/delete`, {
+		method: 'DELETE',
+		token: token || undefined
+	});

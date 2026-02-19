@@ -1,31 +1,8 @@
 import { RETRIEVAL_API_BASE_URL } from '$lib/constants';
+import { apiFetch } from '$lib/utils/api';
 
-export const getRAGConfig = async (token: string) => {
-	let error = null;
-
-	const res = await fetch(`${RETRIEVAL_API_BASE_URL}/config`, {
-		method: 'GET',
-		headers: {
-			'Content-Type': 'application/json',
-			Authorization: `Bearer ${token}`
-		}
-	})
-		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
-		})
-		.catch((err) => {
-			console.error(err);
-			error = err.detail;
-			return null;
-		});
-
-	if (error) {
-		throw error;
-	}
-
-	return res;
-};
+export const getRAGConfig = (token: string) =>
+	apiFetch(`${RETRIEVAL_API_BASE_URL}/config`, { token });
 
 type ChunkConfigForm = {
 	chunk_size: number;
@@ -60,62 +37,15 @@ type RAGConfigForm = {
 	youtube?: YoutubeConfigForm;
 };
 
-export const updateRAGConfig = async (token: string, payload: RAGConfigForm) => {
-	let error = null;
-
-	const res = await fetch(`${RETRIEVAL_API_BASE_URL}/config/update`, {
+export const updateRAGConfig = (token: string, payload: RAGConfigForm) =>
+	apiFetch(`${RETRIEVAL_API_BASE_URL}/config/update`, {
 		method: 'POST',
-		headers: {
-			'Content-Type': 'application/json',
-			Authorization: `Bearer ${token}`
-		},
-		body: JSON.stringify({
-			...payload
-		})
-	})
-		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
-		})
-		.catch((err) => {
-			console.error(err);
-			error = err.detail;
-			return null;
-		});
+		token,
+		body: { ...payload }
+	});
 
-	if (error) {
-		throw error;
-	}
-
-	return res;
-};
-
-export const getQuerySettings = async (token: string) => {
-	let error = null;
-
-	const res = await fetch(`${RETRIEVAL_API_BASE_URL}/query/settings`, {
-		method: 'GET',
-		headers: {
-			'Content-Type': 'application/json',
-			Authorization: `Bearer ${token}`
-		}
-	})
-		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
-		})
-		.catch((err) => {
-			console.error(err);
-			error = err.detail;
-			return null;
-		});
-
-	if (error) {
-		throw error;
-	}
-
-	return res;
-};
+export const getQuerySettings = (token: string) =>
+	apiFetch(`${RETRIEVAL_API_BASE_URL}/query/settings`, { token });
 
 type QuerySettings = {
 	k: number | null;
@@ -123,62 +53,15 @@ type QuerySettings = {
 	template: string | null;
 };
 
-export const updateQuerySettings = async (token: string, settings: QuerySettings) => {
-	let error = null;
-
-	const res = await fetch(`${RETRIEVAL_API_BASE_URL}/query/settings/update`, {
+export const updateQuerySettings = (token: string, settings: QuerySettings) =>
+	apiFetch(`${RETRIEVAL_API_BASE_URL}/query/settings/update`, {
 		method: 'POST',
-		headers: {
-			'Content-Type': 'application/json',
-			Authorization: `Bearer ${token}`
-		},
-		body: JSON.stringify({
-			...settings
-		})
-	})
-		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
-		})
-		.catch((err) => {
-			console.error(err);
-			error = err.detail;
-			return null;
-		});
+		token,
+		body: { ...settings }
+	});
 
-	if (error) {
-		throw error;
-	}
-
-	return res;
-};
-
-export const getEmbeddingConfig = async (token: string) => {
-	let error = null;
-
-	const res = await fetch(`${RETRIEVAL_API_BASE_URL}/embedding`, {
-		method: 'GET',
-		headers: {
-			'Content-Type': 'application/json',
-			Authorization: `Bearer ${token}`
-		}
-	})
-		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
-		})
-		.catch((err) => {
-			console.error(err);
-			error = err.detail;
-			return null;
-		});
-
-	if (error) {
-		throw error;
-	}
-
-	return res;
-};
+export const getEmbeddingConfig = (token: string) =>
+	apiFetch(`${RETRIEVAL_API_BASE_URL}/embedding`, { token });
 
 type OpenAIConfigForm = {
 	key: string;
@@ -199,96 +82,26 @@ type EmbeddingModelUpdateForm = {
 	embedding_batch_size?: number;
 };
 
-export const updateEmbeddingConfig = async (token: string, payload: EmbeddingModelUpdateForm) => {
-	let error = null;
-
-	const res = await fetch(`${RETRIEVAL_API_BASE_URL}/embedding/update`, {
+export const updateEmbeddingConfig = (token: string, payload: EmbeddingModelUpdateForm) =>
+	apiFetch(`${RETRIEVAL_API_BASE_URL}/embedding/update`, {
 		method: 'POST',
-		headers: {
-			'Content-Type': 'application/json',
-			Authorization: `Bearer ${token}`
-		},
-		body: JSON.stringify({
-			...payload
-		})
-	})
-		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
-		})
-		.catch((err) => {
-			console.error(err);
-			error = err.detail;
-			return null;
-		});
+		token,
+		body: { ...payload }
+	});
 
-	if (error) {
-		throw error;
-	}
-
-	return res;
-};
-
-export const getRerankingConfig = async (token: string) => {
-	let error = null;
-
-	const res = await fetch(`${RETRIEVAL_API_BASE_URL}/reranking`, {
-		method: 'GET',
-		headers: {
-			'Content-Type': 'application/json',
-			Authorization: `Bearer ${token}`
-		}
-	})
-		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
-		})
-		.catch((err) => {
-			console.error(err);
-			error = err.detail;
-			return null;
-		});
-
-	if (error) {
-		throw error;
-	}
-
-	return res;
-};
+export const getRerankingConfig = (token: string) =>
+	apiFetch(`${RETRIEVAL_API_BASE_URL}/reranking`, { token });
 
 type RerankingModelUpdateForm = {
 	reranking_model: string;
 };
 
-export const updateRerankingConfig = async (token: string, payload: RerankingModelUpdateForm) => {
-	let error = null;
-
-	const res = await fetch(`${RETRIEVAL_API_BASE_URL}/reranking/update`, {
+export const updateRerankingConfig = (token: string, payload: RerankingModelUpdateForm) =>
+	apiFetch(`${RETRIEVAL_API_BASE_URL}/reranking/update`, {
 		method: 'POST',
-		headers: {
-			'Content-Type': 'application/json',
-			Authorization: `Bearer ${token}`
-		},
-		body: JSON.stringify({
-			...payload
-		})
-	})
-		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
-		})
-		.catch((err) => {
-			console.error(err);
-			error = err.detail;
-			return null;
-		});
-
-	if (error) {
-		throw error;
-	}
-
-	return res;
-};
+		token,
+		body: { ...payload }
+	});
 
 export interface SearchDocument {
 	status: boolean;
@@ -296,237 +109,67 @@ export interface SearchDocument {
 	filenames: string[];
 }
 
-export const processYoutubeVideo = async (token: string, url: string) => {
-	let error = null;
-
-	const res = await fetch(`${RETRIEVAL_API_BASE_URL}/process/youtube`, {
+export const processYoutubeVideo = (token: string, url: string) =>
+	apiFetch(`${RETRIEVAL_API_BASE_URL}/process/youtube`, {
 		method: 'POST',
-		headers: {
-			Accept: 'application/json',
-			'Content-Type': 'application/json',
-			authorization: `Bearer ${token}`
-		},
-		body: JSON.stringify({
-			url: url
-		})
-	})
-		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
-		})
-		.catch((err) => {
-			error = err.detail;
-			console.error(err);
-			return null;
-		});
+		token,
+		body: { url }
+	});
 
-	if (error) {
-		throw error;
-	}
-
-	return res;
-};
-
-export const processWeb = async (
+export const processWeb = (
 	token: string,
 	collection_name: string,
 	url: string,
 	process: boolean = true
 ) => {
-	let error = null;
-
 	const searchParams = new URLSearchParams();
-
 	if (!process) {
 		searchParams.append('process', 'false');
 	}
-
-	const res = await fetch(`${RETRIEVAL_API_BASE_URL}/process/web?${searchParams.toString()}`, {
+	return apiFetch(`${RETRIEVAL_API_BASE_URL}/process/web?${searchParams.toString()}`, {
 		method: 'POST',
-		headers: {
-			Accept: 'application/json',
-			'Content-Type': 'application/json',
-			authorization: `Bearer ${token}`
-		},
-		body: JSON.stringify({
-			url: url,
-			collection_name: collection_name
-		})
-	})
-		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
-		})
-		.catch((err) => {
-			error = err.detail;
-			console.error(err);
-			return null;
-		});
-
-	if (error) {
-		throw error;
-	}
-
-	return res;
+		token,
+		body: { url, collection_name }
+	});
 };
 
-export const processWebSearch = async (
+export const processWebSearch = (
 	token: string,
 	query: string,
 	collection_name?: string
-): Promise<SearchDocument | null> => {
-	let error = null;
-
-	const res = await fetch(`${RETRIEVAL_API_BASE_URL}/process/web/search`, {
+): Promise<SearchDocument | null> =>
+	apiFetch(`${RETRIEVAL_API_BASE_URL}/process/web/search`, {
 		method: 'POST',
-		headers: {
-			'Content-Type': 'application/json',
-			Authorization: `Bearer ${token}`
-		},
-		body: JSON.stringify({
-			query,
-			collection_name: collection_name ?? ''
-		})
-	})
-		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
-		})
-		.catch((err) => {
-			console.error(err);
-			error = err.detail;
-			return null;
-		});
+		token,
+		body: { query, collection_name: collection_name ?? '' }
+	});
 
-	if (error) {
-		throw error;
-	}
-
-	return res;
-};
-
-export const queryDoc = async (
+export const queryDoc = (
 	token: string,
 	collection_name: string,
 	query: string,
 	k: number | null = null
-) => {
-	let error = null;
-
-	const res = await fetch(`${RETRIEVAL_API_BASE_URL}/query/doc`, {
+) =>
+	apiFetch(`${RETRIEVAL_API_BASE_URL}/query/doc`, {
 		method: 'POST',
-		headers: {
-			Accept: 'application/json',
-			'Content-Type': 'application/json',
-			authorization: `Bearer ${token}`
-		},
-		body: JSON.stringify({
-			collection_name: collection_name,
-			query: query,
-			k: k
-		})
-	})
-		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
-		})
-		.catch((err) => {
-			error = err.detail;
-			return null;
-		});
+		token,
+		body: { collection_name, query, k }
+	});
 
-	if (error) {
-		throw error;
-	}
-
-	return res;
-};
-
-export const queryCollection = async (
+export const queryCollection = (
 	token: string,
 	collection_names: string,
 	query: string,
 	k: number | null = null
-) => {
-	let error = null;
-
-	const res = await fetch(`${RETRIEVAL_API_BASE_URL}/query/collection`, {
+) =>
+	apiFetch(`${RETRIEVAL_API_BASE_URL}/query/collection`, {
 		method: 'POST',
-		headers: {
-			Accept: 'application/json',
-			'Content-Type': 'application/json',
-			authorization: `Bearer ${token}`
-		},
-		body: JSON.stringify({
-			collection_names: collection_names,
-			query: query,
-			k: k
-		})
-	})
-		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
-		})
-		.catch((err) => {
-			error = err.detail;
-			return null;
-		});
+		token,
+		body: { collection_names, query, k }
+	});
 
-	if (error) {
-		throw error;
-	}
+export const resetUploadDir = (token: string) =>
+	apiFetch(`${RETRIEVAL_API_BASE_URL}/reset/uploads`, { method: 'POST', token });
 
-	return res;
-};
-
-export const resetUploadDir = async (token: string) => {
-	let error = null;
-
-	const res = await fetch(`${RETRIEVAL_API_BASE_URL}/reset/uploads`, {
-		method: 'POST',
-		headers: {
-			Accept: 'application/json',
-			authorization: `Bearer ${token}`
-		}
-	})
-		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
-		})
-		.catch((err) => {
-			error = err.detail;
-			return null;
-		});
-
-	if (error) {
-		throw error;
-	}
-
-	return res;
-};
-
-export const resetVectorDB = async (token: string) => {
-	let error = null;
-
-	const res = await fetch(`${RETRIEVAL_API_BASE_URL}/reset/db`, {
-		method: 'POST',
-		headers: {
-			Accept: 'application/json',
-			authorization: `Bearer ${token}`
-		}
-	})
-		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
-		})
-		.catch((err) => {
-			error = err.detail;
-			return null;
-		});
-
-	if (error) {
-		throw error;
-	}
-
-	return res;
-};
+export const resetVectorDB = (token: string) =>
+	apiFetch(`${RETRIEVAL_API_BASE_URL}/reset/db`, { method: 'POST', token });
