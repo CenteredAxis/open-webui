@@ -14,6 +14,7 @@
 	import Audio from './Settings/Audio.svelte';
 	import DataControls from './Settings/DataControls.svelte';
 	import Personalization from './Settings/Personalization.svelte';
+	import Context from './Settings/Context.svelte';
 	import Search from '../icons/Search.svelte';
 	import XMark from '../icons/XMark.svelte';
 	import Connections from './Settings/Connections.svelte';
@@ -253,6 +254,20 @@
 				'profile',
 				'user preferences',
 				'userpreferences'
+			]
+		},
+		{
+			id: 'context',
+			title: 'Living Context',
+			keywords: [
+				'context',
+				'living context',
+				'profile',
+				'interests',
+				'google',
+				'learning',
+				'signals',
+				'sessions'
 			]
 		},
 		{
@@ -747,6 +762,30 @@
 								</div>
 								<div class=" self-center">{$i18n.t('Personalization')}</div>
 							</button>
+						{:else if tabId === 'context'}
+							<button
+								role="tab"
+								aria-controls="tab-context"
+								aria-selected={selectedTab === 'context'}
+								class={`px-0.5 md:px-2.5 py-1 min-w-fit rounded-xl flex-1 md:flex-none flex text-left transition
+								${
+									selectedTab === 'context'
+										? ($settings?.highContrastMode ?? false)
+											? 'dark:bg-gray-800 bg-gray-200'
+											: ''
+										: ($settings?.highContrastMode ?? false)
+											? 'hover:bg-gray-200 dark:hover:bg-gray-800'
+											: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'
+								}`}
+								on:click={() => {
+									selectedTab = 'context';
+								}}
+							>
+								<div class=" self-center mr-2">
+									<UserCircle strokeWidth="2" />
+								</div>
+								<div class=" self-center">{$i18n.t('Living Context')}</div>
+							</button>
 						{:else if tabId === 'audio'}
 							<button
 								role="tab"
@@ -901,6 +940,13 @@
 					/>
 				{:else if selectedTab === 'personalization'}
 					<Personalization
+						{saveSettings}
+						on:save={() => {
+							toast.success($i18n.t('Settings saved successfully!'));
+						}}
+					/>
+				{:else if selectedTab === 'context'}
+					<Context
 						{saveSettings}
 						on:save={() => {
 							toast.success($i18n.t('Settings saved successfully!'));

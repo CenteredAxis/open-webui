@@ -364,7 +364,14 @@ GOOGLE_CLIENT_SECRET = PersistentConfig(
 GOOGLE_OAUTH_SCOPE = PersistentConfig(
     "GOOGLE_OAUTH_SCOPE",
     "oauth.google.scope",
-    os.environ.get("GOOGLE_OAUTH_SCOPE", "openid email profile"),
+    os.environ.get(
+        "GOOGLE_OAUTH_SCOPE",
+        # calendar.readonly — event titles for context enrichment
+        # drive.metadata.readonly — file names only, no file contents
+        "openid email profile"
+        " https://www.googleapis.com/auth/calendar.readonly"
+        " https://www.googleapis.com/auth/drive.metadata.readonly",
+    ),
 )
 
 GOOGLE_REDIRECT_URI = PersistentConfig(

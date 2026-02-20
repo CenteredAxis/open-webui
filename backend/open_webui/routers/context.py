@@ -263,3 +263,36 @@ async def harvest_context(request: Request, messages: list, user, metadata: dict
 
     except Exception as e:
         log.debug(f"Context harvest failed silently: {e}")
+
+
+##################################
+#
+# External enrichment endpoints
+#
+##################################
+
+
+@router.post("/enrich/google")
+async def enrich_context_from_google(request: Request, user=Depends(get_verified_user)):
+    """
+    Pull Google Calendar events and Drive file names from the past/next 7 days,
+    extract topics via a small LLM call, and merge them into the context document.
+
+    Requires the Google OAuth session to include calendar.readonly and
+    drive.metadata.readonly scopes. Returns the updated context dict.
+
+    Error detail strings (returned as 400):
+        "no_google_session"         — user has not connected Google
+        "google_token_expired"      — token refresh failed
+        "insufficient_google_scope" — calendar/drive scopes not granted
+    """
+    from open_webui.utils.google_enricher import enrich_from_google
+
+    try:
+        updated = await enrich_from_google(request, user)
+        return updated
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        log.exception(f"Google context enrichment failed: {e}")
+        raise HTTPException(status_code=500, detail="google_enrichment_failed")
