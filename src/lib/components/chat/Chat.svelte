@@ -160,6 +160,9 @@
 	let files = [];
 	let params = {};
 
+	let originalChatId = '';
+	let branchPointMessageId = '';
+
 	// Message queue for storing messages while generating
 	let messageQueue: { id: string; prompt: string; files: any[] }[] = [];
 
@@ -1044,6 +1047,8 @@
 
 		chatFiles = [];
 		params = {};
+		originalChatId = '';
+		branchPointMessageId = '';
 
 		if ($page.url.searchParams.get('youtube')) {
 			await uploadWeb(`https://www.youtube.com/watch?v=${$page.url.searchParams.get('youtube')}`);
@@ -1146,6 +1151,8 @@
 
 				params = chatContent?.params ?? {};
 				chatFiles = chatContent?.files ?? [];
+				originalChatId = chatContent?.originalChatId ?? "";
+				branchPointMessageId = chatContent?.branchPointMessageId ?? "";
 
 				autoScroll = true;
 				await tick();
@@ -2567,7 +2574,9 @@
 								system: $settings.system ?? undefined,
 								params: params,
 								history: history,
-								timestamp: Date.now()
+								timestamp: Date.now(),
+								originalChatId: originalChatId,
+								branchPointMessageId: branchPointMessageId
 							}
 						}}
 						{history}

@@ -39,6 +39,8 @@
 	import ChatCheck from '../icons/ChatCheck.svelte';
 	import Knobs from '../icons/Knobs.svelte';
 	import { WEBUI_API_BASE_URL } from '$lib/constants';
+	import { createMessagesList } from '$lib/utils';
+	import { getChatById } from '$lib/apis/chats';
 
 	const i18n = getContext('i18n');
 
@@ -59,6 +61,71 @@
 
 	let showShareChatModal = false;
 	let showDownloadChatModal = false;
+
+	let originalChatTitle = '';
+
+	$: if (chat?.chat?.originalChatId) {
+		getChatById(localStorage.token, chat.chat.originalChatId)
+			.then((originalChat) => {
+				originalChatTitle = originalChat?.title ?? '';
+			})
+			.catch(() => {
+				originalChatTitle = '';
+			});
+	} else {
+		originalChatTitle = '';
+	}
+
+	const getMessageContentText = (content) => {
+		if (typeof content === 'string') return content;
+		if (Array.isArray(content)) {
+			return content
+				.filter((p) => p.type === 'text')
+				.map((p) => p.text)
+				.join('');
+		}
+		return '';
+	};
+
+	const returnToOriginalChat = async (withContext = false) => {
+		const originalChatId = chat?.chat?.originalChatId;
+		if (!originalChatId) return;
+
+		if (withContext) {
+			const messages = createMessagesList(history, history.currentId);
+			const branchPointMessageId = chat?.chat?.branchPointMessageId;
+			const branchIdx = messages.findIndex((m) => m.id === branchPointMessageId);
+			const newMessages = branchIdx >= 0 ? messages.slice(branchIdx + 1) : messages;
+
+			if (newMessages.length > 0) {
+				const transcript =
+					`**[Branch conversation context]**\n\n` +
+					newMessages
+						.map((m) => {
+							const role = m.role === 'user' ? 'User' : 'Assistant';
+							const text = getMessageContentText(m.content);
+							return `**${role}:** ${text}`;
+						})
+						.join('\n\n') +
+					'\n\n';
+
+				sessionStorage.setItem(
+					`chat-input-${originalChatId}`,
+					JSON.stringify({
+						prompt: transcript,
+						files: [],
+						selectedToolIds: [],
+						selectedFilterIds: [],
+						webSearchEnabled: false,
+						imageGenerationEnabled: false,
+						codeInterpreterEnabled: false
+					})
+				);
+			}
+		}
+
+		await goto(`/c/${originalChatId}`);
+	};
 </script>
 
 <ShareChatModal bind:show={showShareChatModal} chatId={$chatId} />
@@ -260,6 +327,31 @@
 	{#if $temporaryChatEnabled && ($chatId ?? '').startsWith('local:')}
 		<div class=" w-full z-30 text-center">
 			<div class="text-xs text-gray-500">{$i18n.t('Temporary Chat')}</div>
+		</div>
+	{/if}
+
+	{#if chat?.chat?.originalChatId}
+		<div class="w-full z-30 flex items-center justify-center gap-2 py-0.5">
+			<span class="text-xs text-gray-500 dark:text-gray-400">
+				{originalChatTitle
+					? $i18n.t('Branch of "{{title}}"', { title: originalChatTitle })
+					: $i18n.t('Branch chat')}
+			</span>
+			<button
+				class="text-xs text-blue-500 hover:text-blue-600 dark:text-blue-400 dark:hover:text-blue-300 transition underline-offset-2 hover:underline"
+				on:click={() => returnToOriginalChat(false)}
+			>
+				{$i18n.t('Return')}
+			</button>
+			{#if (history?.messages?.[chat?.chat?.branchPointMessageId]?.childrenIds?.length ?? 0) > 0}
+				<span class="text-xs text-gray-400">·</span>
+				<button
+					class="text-xs text-blue-500 hover:text-blue-600 dark:text-blue-400 dark:hover:text-blue-300 transition underline-offset-2 hover:underline"
+					on:click={() => returnToOriginalChat(true)}
+				>
+					{$i18n.t('Return with context')}
+				</button>
+			{/if}
 		</div>
 	{/if}
 
