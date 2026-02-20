@@ -366,11 +366,17 @@ GOOGLE_OAUTH_SCOPE = PersistentConfig(
     "oauth.google.scope",
     os.environ.get(
         "GOOGLE_OAUTH_SCOPE",
-        # calendar.readonly — event titles for context enrichment
+        # calendar.readonly       — event titles for context enrichment
         # drive.metadata.readonly — file names only, no file contents
+        # gmail.metadata          — sent email subjects only (no body)
+        # youtube.readonly        — liked videos + subscribed channels
+        # tasks.readonly          — active task titles
         "openid email profile"
         " https://www.googleapis.com/auth/calendar.readonly"
-        " https://www.googleapis.com/auth/drive.metadata.readonly",
+        " https://www.googleapis.com/auth/drive.metadata.readonly"
+        " https://www.googleapis.com/auth/gmail.metadata"
+        " https://www.googleapis.com/auth/youtube.readonly"
+        " https://www.googleapis.com/auth/tasks.readonly",
     ),
 )
 

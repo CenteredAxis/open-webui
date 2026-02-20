@@ -1,13 +1,24 @@
 """
-Google Context Enricher — pulls Calendar + Drive signals into the context document.
+Google Context Enricher — pulls signals from five Google APIs into the context document.
 
-Uses the existing OAuth token infrastructure (OAuthSessions + OAuthManager).
-Requires calendar.readonly + drive.metadata.readonly scopes; raises ValueError
-with a machine-readable reason string if they are not available.
+APIs used (all read-only, metadata only where possible):
+  - Google Calendar  — event titles, past/next 7 days
+  - Google Drive     — recently modified file names (metadata, no content)
+  - Gmail            — sent email subjects (no body content)
+  - YouTube          — liked video titles + subscribed channel names
+  - Google Tasks     — active (incomplete) task titles
 
-Called by the context router's POST /enrich/google endpoint.
+All five fetches run concurrently via asyncio.gather. Any individual source
+that fails (e.g. due to missing scope from before a reconnect) degrades
+gracefully — the others still contribute. Only the auth failure path
+(no session, expired token) raises ValueError to the caller.
+
+Requires scopes (added to GOOGLE_OAUTH_SCOPE):
+  calendar.readonly, drive.metadata.readonly,
+  gmail.metadata, youtube.readonly, tasks.readonly
 """
 
+import asyncio
 import json
 import logging
 import time
@@ -23,100 +34,126 @@ from open_webui.utils.task import get_task_model_id
 
 log = logging.getLogger(__name__)
 
-_GOOGLE_CALENDAR_URL = (
-    "https://www.googleapis.com/calendar/v3/calendars/primary/events"
-)
-_GOOGLE_DRIVE_URL = "https://www.googleapis.com/drive/v3/files"
+# ── API endpoints ────────────────────────────────────────────────────────────
+
+_CALENDAR_URL = "https://www.googleapis.com/calendar/v3/calendars/primary/events"
+_DRIVE_URL = "https://www.googleapis.com/drive/v3/files"
+_GMAIL_MESSAGES_URL = "https://gmail.googleapis.com/gmail/v1/users/me/messages"
+_GMAIL_MESSAGE_URL = "https://gmail.googleapis.com/gmail/v1/users/me/messages/{id}"
+_YT_LIKED_URL = "https://www.googleapis.com/youtube/v3/videos"
+_YT_SUBS_URL = "https://www.googleapis.com/youtube/v3/subscriptions"
+_TASKS_LISTS_URL = "https://tasks.googleapis.com/tasks/v1/users/@me/lists"
+_TASKS_URL = "https://tasks.googleapis.com/tasks/v1/lists/{list_id}/tasks"
+
+
+# ── Orchestrator ─────────────────────────────────────────────────────────────
 
 
 async def enrich_from_google(request: Request, user) -> dict:
     """
-    Pull Calendar and Drive signals; extract topics via LLM; merge into context.
-    Returns the updated context dict.
+    Pull signals from all available Google APIs; extract topics via LLM; merge
+    into the context document. Returns the updated context dict.
 
-    Raises ValueError with a reason string on any recoverable failure:
-        "no_google_session"          — user has not connected Google
-        "google_token_expired"       — token refresh failed
-        "insufficient_google_scope"  — calendar/drive scopes not granted
+    Raises ValueError with a reason string on auth failures:
+        "no_google_session"    — user has not connected Google
+        "google_token_expired" — token refresh failed
     """
-    # 1. Get stored Google OAuth session
     session = OAuthSessions.get_session_by_provider_and_user_id("google", user.id)
     if not session:
         raise ValueError("no_google_session")
 
-    # 2. Get a valid (auto-refreshed) access token
     token = await request.app.state.oauth_manager.get_oauth_token(user.id, session.id)
     if not token:
         raise ValueError("google_token_expired")
 
     access_token = token["access_token"]
 
-    # 3. Fetch signals from Google APIs
-    calendar_items = await _fetch_calendar_events(access_token)
-    drive_items = await _fetch_drive_files(access_token)
+    # Fetch all five sources concurrently — individual failures degrade gracefully
+    results = await asyncio.gather(
+        _fetch_calendar_events(access_token),
+        _fetch_drive_files(access_token),
+        _fetch_gmail_subjects(access_token),
+        _fetch_youtube_signals(access_token),
+        _fetch_tasks(access_token),
+        return_exceptions=True,
+    )
 
-    if not calendar_items and not drive_items:
-        # Nothing to extract — return the current context unchanged
+    calendar_items, drive_items, gmail_subjects, youtube_signals, task_items = (
+        r if not isinstance(r, Exception) else _empty_for(r) for r in results
+    )
+
+    # Log any unexpected fetch errors at debug level
+    for label, result in zip(
+        ["calendar", "drive", "gmail", "youtube", "tasks"], results
+    ):
+        if isinstance(result, Exception):
+            log.debug(f"google_enricher: {label} fetch degraded: {result}")
+
+    all_empty = (
+        not calendar_items
+        and not drive_items
+        and not gmail_subjects
+        and not youtube_signals
+        and not task_items
+    )
+    if all_empty:
         user_obj = Users.get_user_by_id(user.id)
         return (user_obj.info or {}).get("context", {})
 
-    # 4. Extract interests/topics via LLM task call
-    extracted = await _extract_topics(request, user, calendar_items, drive_items)
+    extracted = await _extract_topics(
+        request, user,
+        calendar_items=calendar_items,
+        drive_items=drive_items,
+        gmail_subjects=gmail_subjects,
+        youtube_signals=youtube_signals,
+        task_items=task_items,
+    )
 
-    # 5. Merge into the existing context document and persist
     return _merge_google_signals(user, extracted)
 
 
-# ── Google API helpers ──────────────────────────────────────────────────────
+def _empty_for(exc: Exception):
+    """Return an appropriate empty value for a failed fetch."""
+    return []  # all fetchers return lists; empty list is safe default
+
+
+# ── Google Calendar ───────────────────────────────────────────────────────────
 
 
 async def _fetch_calendar_events(access_token: str) -> list[str]:
-    """Return a list of event summary strings from the primary calendar.
-
-    Covers the past 7 days and the next 7 days (max 20 events).
-    Returns an empty list on permission errors — the caller handles 403 separately.
-    """
+    """Event summary strings, past/next 7 days, max 20."""
     now = datetime.now(timezone.utc)
-    time_min = (now - timedelta(days=7)).isoformat()
-    time_max = (now + timedelta(days=7)).isoformat()
-
     params = {
         "orderBy": "startTime",
         "singleEvents": "true",
-        "timeMin": time_min,
-        "timeMax": time_max,
+        "timeMin": (now - timedelta(days=7)).isoformat(),
+        "timeMax": (now + timedelta(days=7)).isoformat(),
         "maxResults": "20",
         "fields": "items(summary)",
     }
-
     try:
         async with httpx.AsyncClient(timeout=10) as client:
             resp = await client.get(
-                _GOOGLE_CALENDAR_URL,
+                _CALENDAR_URL,
                 params=params,
                 headers={"Authorization": f"Bearer {access_token}"},
             )
-            if resp.status_code == 403:
-                raise ValueError("insufficient_google_scope")
             resp.raise_for_status()
-            data = resp.json()
             return [
                 item["summary"]
-                for item in data.get("items", [])
+                for item in resp.json().get("items", [])
                 if item.get("summary")
             ]
-    except ValueError:
-        raise
     except Exception as e:
-        log.debug(f"Google Calendar fetch error: {e}")
+        log.debug(f"calendar fetch: {e}")
         return []
 
 
-async def _fetch_drive_files(access_token: str) -> list[dict]:
-    """Return a list of {name, mimeType} dicts for recently modified Drive files.
+# ── Google Drive ──────────────────────────────────────────────────────────────
 
-    Covers files modified in the past 7 days (max 20). Metadata only — no content.
-    """
+
+async def _fetch_drive_files(access_token: str) -> list[dict]:
+    """File names + MIME types for files modified in the past 7 days, max 20."""
     seven_days_ago = (datetime.now(timezone.utc) - timedelta(days=7)).isoformat()
     params = {
         "orderBy": "modifiedTime desc",
@@ -124,43 +161,216 @@ async def _fetch_drive_files(access_token: str) -> list[dict]:
         "q": f"modifiedTime > '{seven_days_ago}'",
         "fields": "files(name,mimeType)",
     }
-
     try:
         async with httpx.AsyncClient(timeout=10) as client:
             resp = await client.get(
-                _GOOGLE_DRIVE_URL,
+                _DRIVE_URL,
                 params=params,
                 headers={"Authorization": f"Bearer {access_token}"},
             )
-            if resp.status_code == 403:
-                raise ValueError("insufficient_google_scope")
             resp.raise_for_status()
-            data = resp.json()
             return [
                 {"name": f["name"], "mimeType": f.get("mimeType", "")}
-                for f in data.get("files", [])
+                for f in resp.json().get("files", [])
                 if f.get("name")
             ]
-    except ValueError:
-        raise
     except Exception as e:
-        log.debug(f"Google Drive fetch error: {e}")
+        log.debug(f"drive fetch: {e}")
         return []
 
 
-# ── LLM extraction ──────────────────────────────────────────────────────────
+# ── Gmail (metadata only — subjects of sent mail) ────────────────────────────
+
+
+async def _fetch_gmail_subjects(access_token: str) -> list[str]:
+    """
+    Subject lines from the user's 15 most recently sent emails.
+
+    Sent mail is higher signal than inbox (avoids newsletters, spam, notifications).
+    Fetches message IDs first, then subject headers concurrently — no body content
+    is accessed or returned.
+    """
+    headers = {"Authorization": f"Bearer {access_token}"}
+    try:
+        async with httpx.AsyncClient(timeout=15) as client:
+            # Step 1: get message IDs from SENT label
+            list_resp = await client.get(
+                _GMAIL_MESSAGES_URL,
+                params={"maxResults": "15", "labelIds": "SENT"},
+                headers=headers,
+            )
+            list_resp.raise_for_status()
+            message_ids = [
+                m["id"] for m in list_resp.json().get("messages", [])
+            ]
+            if not message_ids:
+                return []
+
+            # Step 2: fetch subject header for each message concurrently
+            async def get_subject(msg_id: str) -> str:
+                try:
+                    r = await client.get(
+                        _GMAIL_MESSAGE_URL.format(id=msg_id),
+                        params={
+                            "format": "metadata",
+                            "metadataHeaders": "Subject",
+                            "fields": "payload/headers",
+                        },
+                        headers=headers,
+                    )
+                    r.raise_for_status()
+                    for header in r.json().get("payload", {}).get("headers", []):
+                        if header.get("name", "").lower() == "subject":
+                            return header.get("value", "")
+                except Exception:
+                    pass
+                return ""
+
+            subjects = await asyncio.gather(*[get_subject(mid) for mid in message_ids])
+            return [s for s in subjects if s and len(s) > 3]  # filter empty/trivial
+
+    except Exception as e:
+        log.debug(f"gmail fetch: {e}")
+        return []
+
+
+# ── YouTube ───────────────────────────────────────────────────────────────────
+
+
+async def _fetch_youtube_signals(access_token: str) -> list[str]:
+    """
+    Returns a combined list of signal strings:
+      - Titles of the 20 most recently liked videos
+      - Names of the 25 most recently subscribed channels
+
+    Together these are the most direct signal of learning interests and
+    ongoing consumption without requiring watch history (which the API
+    doesn't expose directly).
+    """
+    headers = {"Authorization": f"Bearer {access_token}"}
+    signals: list[str] = []
+
+    async with httpx.AsyncClient(timeout=10) as client:
+        liked_task = client.get(
+            _YT_LIKED_URL,
+            params={
+                "part": "snippet",
+                "myRating": "like",
+                "maxResults": "20",
+                "fields": "items/snippet/title",
+            },
+            headers=headers,
+        )
+        subs_task = client.get(
+            _YT_SUBS_URL,
+            params={
+                "part": "snippet",
+                "mine": "true",
+                "maxResults": "25",
+                "order": "relevance",
+                "fields": "items/snippet/title",
+            },
+            headers=headers,
+        )
+
+        results = await asyncio.gather(liked_task, subs_task, return_exceptions=True)
+
+    for resp in results:
+        if isinstance(resp, Exception):
+            log.debug(f"youtube fetch partial: {resp}")
+            continue
+        try:
+            resp.raise_for_status()
+            for item in resp.json().get("items", []):
+                title = item.get("snippet", {}).get("title", "")
+                if title:
+                    signals.append(title)
+        except Exception as e:
+            log.debug(f"youtube parse: {e}")
+
+    return signals
+
+
+# ── Google Tasks ──────────────────────────────────────────────────────────────
+
+
+async def _fetch_tasks(access_token: str) -> list[str]:
+    """
+    Returns titles of all incomplete tasks across the user's task lists.
+
+    Fetches up to 5 task lists, then up to 15 active tasks per list,
+    all concurrently. Task titles are the most direct signal of what
+    the user is actively trying to accomplish.
+    """
+    headers = {"Authorization": f"Bearer {access_token}"}
+    task_titles: list[str] = []
+
+    try:
+        async with httpx.AsyncClient(timeout=15) as client:
+            # Step 1: get task lists
+            lists_resp = await client.get(
+                _TASKS_LISTS_URL,
+                params={"maxResults": "5"},
+                headers=headers,
+            )
+            lists_resp.raise_for_status()
+            list_ids = [
+                item["id"]
+                for item in lists_resp.json().get("items", [])
+                if item.get("id")
+            ]
+            if not list_ids:
+                return []
+
+            # Step 2: fetch active tasks for each list concurrently
+            async def get_list_tasks(list_id: str) -> list[str]:
+                try:
+                    r = await client.get(
+                        _TASKS_URL.format(list_id=list_id),
+                        params={
+                            "showCompleted": "false",
+                            "showHidden": "false",
+                            "maxResults": "15",
+                            "fields": "items/title",
+                        },
+                        headers=headers,
+                    )
+                    r.raise_for_status()
+                    return [
+                        item["title"]
+                        for item in r.json().get("items", [])
+                        if item.get("title")
+                    ]
+                except Exception:
+                    return []
+
+            per_list = await asyncio.gather(*[get_list_tasks(lid) for lid in list_ids])
+            for titles in per_list:
+                task_titles.extend(titles)
+
+    except Exception as e:
+        log.debug(f"tasks fetch: {e}")
+
+    return task_titles
+
+
+# ── LLM topic extraction ─────────────────────────────────────────────────────
 
 
 async def _extract_topics(
     request: Request,
     user,
+    *,
     calendar_items: list[str],
     drive_items: list[dict],
+    gmail_subjects: list[str],
+    youtube_signals: list[str],
+    task_items: list[str],
 ) -> dict:
     """
     Use a small LLM task call to extract interests and a profile note from
-    raw Calendar + Drive metadata. Returns {"interests": [...], "profile_note": "..."}.
-    Falls back to empty dict on any error — the enricher degrades gracefully.
+    all five Google signal sources. Returns {"interests": [...], "profile_note": "..."}.
+    Falls back to empty dict on any error.
     """
     task_model_id = get_task_model_id(
         request.app.state.config.DEFAULT_MODELS
@@ -170,28 +380,36 @@ async def _extract_topics(
         request.app.state.MODELS,
     )
     if not task_model_id:
-        log.debug("google_enricher: no task model available, skipping extraction")
         return {}
 
-    calendar_text = (
-        "\n".join(f"- {e}" for e in calendar_items) if calendar_items else "(none)"
-    )
-    drive_text = (
-        "\n".join(f"- {f['name']}" for f in drive_items) if drive_items else "(none)"
-    )
+    def fmt(items: list, label_fn=None) -> str:
+        if not items:
+            return "(none)"
+        return "\n".join(
+            f"- {label_fn(i) if label_fn else i}" for i in items[:20]
+        )
 
-    prompt = f"""Based only on the titles below, identify what topics and projects this person is currently working on or focused on. Return compact JSON only — no explanation.
+    prompt = f"""Based only on the metadata titles below, identify what topics, projects, and areas this person is currently focused on. Return compact JSON only — no explanation.
 
 Calendar events (past/next 7 days):
-{calendar_text}
+{fmt(calendar_items)}
 
 Recently modified Drive files:
-{drive_text}
+{fmt(drive_items, lambda f: f['name'])}
+
+Recently sent email subjects:
+{fmt(gmail_subjects)}
+
+YouTube liked videos and subscribed channels:
+{fmt(youtube_signals)}
+
+Active tasks (to-do items):
+{fmt(task_items)}
 
 Return JSON with exactly these keys:
 {{
   "interests": ["topic1", "topic2", ...],
-  "profile_note": "one sentence about what this person seems to be focused on right now"
+  "profile_note": "one sentence about what this person seems to be working on and focused on right now"
 }}"""
 
     try:
@@ -201,15 +419,13 @@ Return JSON with exactly these keys:
                 "model": task_model_id,
                 "messages": [{"role": "user", "content": prompt}],
                 "stream": False,
-                "max_completion_tokens": 200,
+                "max_completion_tokens": 300,
                 "metadata": {"task": "google_context_enrich"},
             },
             user=user,
             bypass_filter=True,
         )
         content = response["choices"][0]["message"]["content"]
-
-        # Extract JSON from response
         bracket_start = content.find("{")
         bracket_end = content.rfind("}") + 1
         if bracket_start == -1 or bracket_end == 0:
@@ -220,17 +436,14 @@ Return JSON with exactly these keys:
         return {}
 
 
-# ── Merge ───────────────────────────────────────────────────────────────────
+# ── Merge ─────────────────────────────────────────────────────────────────────
 
 
 def _merge_google_signals(user, extracted: dict) -> dict:
     """
-    Merge extracted Google signals into the existing context document.
-
-    - New interests are unioned with existing (deduplicated).
-    - profile_note is appended to existing profile if non-empty.
-    - _google_synced_at is set to now.
-    - Writes back via Users.update_user_by_id and returns the updated context.
+    Merge extracted topics into the existing context document.
+    New interests are unioned (deduplicated). Profile note is appended
+    if not already present. Records _google_synced_at.
     """
     user_obj = Users.get_user_by_id(user.id)
     if not user_obj:
@@ -239,14 +452,10 @@ def _merge_google_signals(user, extracted: dict) -> dict:
     info = dict(user_obj.info or {})
     ctx = dict(info.get("context", {}))
 
-    # Merge interests (union, preserve order, deduplicate)
     existing = list(ctx.get("interests", []))
-    new_interests = [
-        i for i in extracted.get("interests", []) if i not in existing
-    ]
+    new_interests = [i for i in extracted.get("interests", []) if i not in existing]
     ctx["interests"] = existing + new_interests
 
-    # Append profile note if meaningful
     profile_note = (extracted.get("profile_note") or "").strip()
     if profile_note:
         existing_profile = ctx.get("profile", "").strip()
