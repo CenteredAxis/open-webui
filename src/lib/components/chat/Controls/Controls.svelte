@@ -8,11 +8,13 @@
 	import Valves from '$lib/components/chat/Controls/Valves.svelte';
 	import FileItem from '$lib/components/common/FileItem.svelte';
 	import Collapsible from '$lib/components/common/Collapsible.svelte';
+	import SystemTelemetry from './SystemTelemetry.svelte';
 
 	import { user, settings } from '$lib/stores';
 	export let models = [];
 	export let chatFiles = [];
 	export let params = {};
+	export let history = { messages: {}, currentId: null };
 
 	let showValves = false;
 </script>
@@ -29,6 +31,14 @@
 			<XMark className="size-3.5" />
 		</button>
 	</div>
+
+	<Collapsible title={$i18n.t('System Telemetry')} open={true} buttonClassName="w-full">
+		<div class="mt-2" slot="content">
+			<SystemTelemetry {history} bind:params />
+		</div>
+	</Collapsible>
+
+	<hr class="my-2 border-gray-50 dark:border-gray-700/10" />
 
 	{#if $user?.role === 'admin' || ($user?.permissions.chat?.controls ?? true)}
 		<div class=" dark:text-gray-200 text-sm font-primary py-0.5 px-0.5">

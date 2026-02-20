@@ -203,6 +203,7 @@
 							showControls.set(false);
 						}}
 						{models}
+						{history}
 						bind:chatFiles
 						bind:params
 					/>
@@ -299,6 +300,7 @@
 								showControls.set(false);
 							}}
 							{models}
+							{history}
 							bind:chatFiles
 							bind:params
 						/>
