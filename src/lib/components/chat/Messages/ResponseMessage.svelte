@@ -12,8 +12,9 @@
 	const dispatch = createEventDispatcher();
 
 	import { createNewFeedback, getFeedbackById, updateFeedbackById } from '$lib/apis/evaluations';
-	import { getChatById } from '$lib/apis/chats';
+	import { branchChatByIdAndMessageId, getChatById } from '$lib/apis/chats';
 	import { generateTags } from '$lib/apis';
+	import { goto } from '$app/navigation';
 
 	import {
 		audioQueue,
@@ -997,6 +998,47 @@
 										</svg>
 									</button>
 								</Tooltip>
+
+								{#if !$temporaryChatEnabled}
+									<Tooltip content={$i18n.t('Branch')} placement="bottom">
+										<button
+											aria-label={$i18n.t('Branch')}
+											class="{isLastMessage || ($settings?.highContrastMode ?? false)
+												? 'visible'
+												: 'invisible group-hover:visible'} p-1.5 hover:bg-black/5 dark:hover:bg-white/5 rounded-lg dark:hover:text-white hover:text-black transition"
+											on:click={async () => {
+												const newChat = await branchChatByIdAndMessageId(
+													localStorage.token,
+													chatId,
+													message.id
+												).catch((e) => {
+													toast.error(`${$i18n.t('Failed to branch chat')}: ${e}`);
+													return null;
+												});
+												if (newChat) {
+													await goto(`/c/${newChat.id}`);
+													toast.success($i18n.t('Branched chat created'));
+												}
+											}}
+										>
+											<svg
+												xmlns="http://www.w3.org/2000/svg"
+												fill="none"
+												aria-hidden="true"
+												viewBox="0 0 24 24"
+												stroke-width="2.3"
+												stroke="currentColor"
+												class="w-4 h-4"
+											>
+												<path
+													stroke-linecap="round"
+													stroke-linejoin="round"
+													d="M7.5 21 3 16.5m0 0L7.5 12M3 16.5h13.5m0-13.5L21 7.5m0 0L16.5 12M21 7.5H7.5"
+												/>
+											</svg>
+										</button>
+									</Tooltip>
+								{/if}
 
 								{#if $user?.role === 'admin' || ($user?.permissions?.chat?.tts ?? true)}
 									<Tooltip content={$i18n.t('Read Aloud')} placement="bottom">

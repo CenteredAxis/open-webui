@@ -1199,6 +1199,98 @@ async def pin_chat_by_id(
 
 
 ############################
+# BranchChat
+############################
+
+
+class BranchForm(BaseModel):
+    title: Optional[str] = None
+
+
+@router.post("/{id}/branch/{message_id}", response_model=Optional[ChatResponse])
+async def branch_chat_by_id_and_message_id(
+    id: str,
+    message_id: str,
+    form_data: BranchForm,
+    user=Depends(get_verified_user),
+    db: Session = Depends(get_session),
+):
+    chat = Chats.get_chat_by_id_and_user_id(id, user.id, db=db)
+    if not chat:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED, detail=ERROR_MESSAGES.DEFAULT()
+        )
+
+    history = chat.chat.get("history", {})
+    all_messages = history.get("messages", {})
+
+    if message_id not in all_messages:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Message not found in chat history",
+        )
+
+    # Trace the path from the specified message back to the root
+    path = []
+    current_id = message_id
+    visited = set()
+    while current_id is not None:
+        if current_id in visited or current_id not in all_messages:
+            break
+        visited.add(current_id)
+        path.append(current_id)
+        current_id = all_messages[current_id].get("parentId")
+    path.reverse()  # now ordered root → branch point
+
+    # Build a trimmed messages dict containing only the path
+    new_messages = {}
+    for i, mid in enumerate(path):
+        msg = dict(all_messages[mid])
+        # Each message's children should only include the next message on the path
+        if i < len(path) - 1:
+            msg["childrenIds"] = [path[i + 1]]
+        else:
+            msg["childrenIds"] = []
+        new_messages[mid] = msg
+
+    # Build the flat messages list (root → branch point order)
+    flat_messages = [new_messages[mid] for mid in path]
+
+    updated_chat = {
+        **chat.chat,
+        "title": form_data.title if form_data.title else f"Branch of {chat.title}",
+        "history": {
+            "messages": new_messages,
+            "currentId": message_id,
+        },
+        "messages": flat_messages,
+        "originalChatId": chat.id,
+        "branchPointMessageId": message_id,
+    }
+
+    chats = Chats.import_chats(
+        user.id,
+        [
+            ChatImportForm(
+                **{
+                    "chat": updated_chat,
+                    "meta": chat.meta,
+                }
+            )
+        ],
+        db=db,
+    )
+
+    if chats:
+        return ChatResponse(**chats[0].model_dump())
+    else:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=ERROR_MESSAGES.DEFAULT(),
+        )
+
+
+############################
 # CloneChat
 ############################
 

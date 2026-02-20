@@ -3,10 +3,12 @@
 	import { toast } from 'svelte-sonner';
 	import { tick, getContext, onMount } from 'svelte';
 
-	import { models, settings } from '$lib/stores';
+	import { models, settings, temporaryChatEnabled } from '$lib/stores';
 	import { user as _user } from '$lib/stores';
 	import { copyToClipboard as _copyToClipboard, formatDate } from '$lib/utils';
 	import { WEBUI_API_BASE_URL, WEBUI_BASE_URL } from '$lib/constants';
+	import { branchChatByIdAndMessageId } from '$lib/apis/chats';
+	import { goto } from '$app/navigation';
 
 	import Name from './Name.svelte';
 	import ProfileImage from './ProfileImage.svelte';
@@ -529,6 +531,46 @@
 										stroke-linecap="round"
 										stroke-linejoin="round"
 										d="M15.666 3.888A2.25 2.25 0 0013.5 2.25h-3c-1.03 0-1.9.693-2.166 1.638m7.332 0c.055.194.084.4.084.612v0a.75.75 0 01-.75.75H9a.75.75 0 01-.75-.75v0c0-.212.03-.418.084-.612m7.332 0c.646.049 1.288.11 1.927.184 1.1.128 1.907 1.077 1.907 2.185V19.5a2.25 2.25 0 01-2.25 2.25H6.75A2.25 2.25 0 014.5 19.5V6.257c0-1.108.806-2.057 1.907-2.185a48.208 48.208 0 011.927-.184"
+									/>
+								</svg>
+							</button>
+						</Tooltip>
+					{/if}
+
+					{#if !$temporaryChatEnabled}
+						<Tooltip content={$i18n.t('Branch')} placement="bottom">
+							<button
+								class="{($settings?.highContrastMode ?? false)
+									? ''
+									: 'invisible group-hover:visible'} p-1.5 hover:bg-black/5 dark:hover:bg-white/5 rounded-lg dark:hover:text-white hover:text-black transition"
+								on:click={async () => {
+									const newChat = await branchChatByIdAndMessageId(
+										localStorage.token,
+										chatId,
+										message.id
+									).catch((e) => {
+										toast.error(`${$i18n.t('Failed to branch chat')}: ${e}`);
+										return null;
+									});
+									if (newChat) {
+										await goto(`/c/${newChat.id}`);
+										toast.success($i18n.t('Branched chat created'));
+									}
+								}}
+							>
+								<svg
+									xmlns="http://www.w3.org/2000/svg"
+									fill="none"
+									aria-hidden="true"
+									viewBox="0 0 24 24"
+									stroke-width="2.3"
+									stroke="currentColor"
+									class="w-4 h-4"
+								>
+									<path
+										stroke-linecap="round"
+										stroke-linejoin="round"
+										d="M7.5 21 3 16.5m0 0L7.5 12M3 16.5h13.5m0-13.5L21 7.5m0 0L16.5 12M21 7.5H7.5"
 									/>
 								</svg>
 							</button>
