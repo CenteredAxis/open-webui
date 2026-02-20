@@ -113,27 +113,16 @@
 							>
 						{/if}
 
-						{#if $user?.role === 'admin' || $user?.permissions?.workspace?.skills}
-							<a
-								class="min-w-fit p-1.5 {$page.url.pathname.includes('/workspace/skills')
-									? ''
-									: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'} transition"
-								href="/workspace/skills"
-							>
-								{$i18n.t('Skills')}
-							</a>
-						{/if}
-
-						{#if $user?.role === 'admin' || $user?.permissions?.workspace?.tools}
-							<a
-								class="min-w-fit p-1.5 {$page.url.pathname.includes('/workspace/tools')
-									? ''
-									: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'} transition"
-								href="/workspace/tools"
-							>
-								{$i18n.t('Tools')}
-							</a>
-						{/if}
+						<a
+							class="min-w-fit p-1.5 {$page.url.pathname.includes('/workspace/addons') ||
+							$page.url.pathname.includes('/workspace/tools') ||
+							$page.url.pathname.includes('/workspace/skills')
+								? ''
+								: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'} transition"
+							href="/workspace/addons"
+						>
+							{$i18n.t('Add-ons')}
+						</a>
 					</div>
 				</div>
 
