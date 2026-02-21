@@ -464,10 +464,7 @@
 
 				if (value) {
 					// Only fetch channels if the feature is enabled and user has permission
-					if (
-						$config?.features?.enable_channels &&
-						($user?.role === 'admin' || ($user?.permissions?.features?.channels ?? true))
-					) {
+					if ($config?.features?.enable_channels) {
 						await initChannels();
 					}
 					await initChatList();
@@ -564,11 +561,7 @@
 		selectedChatId = null;
 		selectedFolder.set(null);
 
-		if ($user?.role !== 'admin' && $user?.permissions?.chat?.temporary_enforced) {
-			await temporaryChatEnabled.set(true);
-		} else {
-			await temporaryChatEnabled.set(false);
-		}
+		await temporaryChatEnabled.set(false);
 
 		setTimeout(() => {
 			if ($mobile) {
@@ -765,7 +758,7 @@
 					</Tooltip>
 				</div>
 
-				{#if ($config?.features?.enable_notes ?? false) && ($user?.role === 'admin' || ($user?.permissions?.features?.notes ?? true))}
+				{#if ($config?.features?.enable_notes ?? false)}
 					<div class="">
 						<Tooltip content={$i18n.t('Notes')} placement="right">
 							<a
@@ -789,7 +782,7 @@
 					</div>
 				{/if}
 
-				{#if $user?.role === 'admin' || $user?.permissions?.workspace?.models || $user?.permissions?.workspace?.knowledge || $user?.permissions?.workspace?.prompts || $user?.permissions?.workspace?.tools}
+				{#if true}
 					<div class="">
 						<Tooltip content={$i18n.t('Workspace')} placement="right">
 							<a
@@ -999,7 +992,7 @@
 						</button>
 					</div>
 
-					{#if ($config?.features?.enable_notes ?? false) && ($user?.role === 'admin' || ($user?.permissions?.features?.notes ?? true))}
+					{#if ($config?.features?.enable_notes ?? false)}
 						<div class="px-[0.4375rem] flex justify-center text-gray-800 dark:text-gray-200">
 							<a
 								id="sidebar-notes-button"
@@ -1020,7 +1013,7 @@
 						</div>
 					{/if}
 
-					{#if $user?.role === 'admin' || $user?.permissions?.workspace?.models || $user?.permissions?.workspace?.knowledge || $user?.permissions?.workspace?.prompts || $user?.permissions?.workspace?.tools}
+					{#if true}
 						<div class="px-[0.4375rem] flex justify-center text-gray-800 dark:text-gray-200">
 							<a
 								id="sidebar-workspace-button"
@@ -1068,7 +1061,7 @@
 					</Folder>
 				{/if}
 
-				{#if $config?.features?.enable_channels && ($user?.role === 'admin' || ($user?.permissions?.features?.channels ?? true))}
+				{#if $config?.features?.enable_channels}
 					<Folder
 						id="sidebar-channels"
 						bind:open={showChannels}
@@ -1076,15 +1069,12 @@
 						name={$i18n.t('Channels')}
 						chevron={false}
 						dragAndDrop={false}
-						onAdd={$user?.role === 'admin' || ($user?.permissions?.features?.channels ?? true)
-							? async () => {
-									await tick();
-
-									setTimeout(() => {
-										showCreateChannel = true;
-									}, 0);
-								}
-							: null}
+						onAdd={async () => {
+							await tick();
+							setTimeout(() => {
+								showCreateChannel = true;
+							}, 0);
+						}}
 						onAddLabel={$i18n.t('Create Channel')}
 					>
 						{#each $channels as channel, channelIdx (`${channel?.id}`)}
@@ -1103,7 +1093,7 @@
 					</Folder>
 				{/if}
 
-				{#if $config?.features?.enable_folders && ($user?.role === 'admin' || ($user?.permissions?.features?.folders ?? true))}
+				{#if $config?.features?.enable_folders}
 					<Folder
 						id="sidebar-folders"
 						bind:open={showFolders}

@@ -62,8 +62,7 @@
 	const handleDropdownChange = (state: boolean) => {
 		dispatch('change', state);
 
-		// Fetch usage info when dropdown opens, if user has permission
-		if (state && ($config?.features?.enable_public_active_users_count || role === 'admin')) {
+		if (state && $config?.features?.enable_public_active_users_count) {
 			getUsageInfo();
 		}
 	};
@@ -239,82 +238,73 @@
 				<div class=" self-center truncate">{$i18n.t('Archived Chats')}</div>
 			</DropdownMenu.Item>
 
-			{#if role === 'admin'}
-				<DropdownMenu.Item
-					as="a"
-					href="/playground"
-					class="flex rounded-xl py-1.5 px-3 w-full hover:bg-gray-50 dark:hover:bg-gray-800 transition select-none"
-					on:click={async () => {
-						show = false;
-						if ($mobile) {
-							await tick();
-							showSidebar.set(false);
-						}
-					}}
-				>
-					<div class=" self-center mr-3">
-						<Code className="size-5" strokeWidth="1.5" />
-					</div>
-					<div class=" self-center truncate">{$i18n.t('Playground')}</div>
-				</DropdownMenu.Item>
-				<DropdownMenu.Item
-					as="a"
-					href="/admin"
-					class="flex rounded-xl py-1.5 px-3 w-full hover:bg-gray-50 dark:hover:bg-gray-800 transition select-none"
-					on:click={async () => {
-						show = false;
-						if ($mobile) {
-							await tick();
-							showSidebar.set(false);
-						}
-					}}
-				>
-					<div class=" self-center mr-3">
-						<UserGroup className="w-5 h-5" strokeWidth="1.5" />
-					</div>
-					<div class=" self-center truncate">{$i18n.t('Admin Panel')}</div>
-				</DropdownMenu.Item>
-			{/if}
+			<DropdownMenu.Item
+				as="a"
+				href="/playground"
+				class="flex rounded-xl py-1.5 px-3 w-full hover:bg-gray-50 dark:hover:bg-gray-800 transition select-none"
+				on:click={async () => {
+					show = false;
+					if ($mobile) {
+						await tick();
+						showSidebar.set(false);
+					}
+				}}
+			>
+				<div class=" self-center mr-3">
+					<Code className="size-5" strokeWidth="1.5" />
+				</div>
+				<div class=" self-center truncate">{$i18n.t('Playground')}</div>
+			</DropdownMenu.Item>
+
+			<DropdownMenu.Item
+				as="a"
+				href="/admin"
+				class="flex rounded-xl py-1.5 px-3 w-full hover:bg-gray-50 dark:hover:bg-gray-800 transition select-none"
+				on:click={async () => {
+					show = false;
+					if ($mobile) {
+						await tick();
+						showSidebar.set(false);
+					}
+				}}
+			>
+				<div class=" self-center mr-3">
+					<UserGroup className="w-5 h-5" strokeWidth="1.5" />
+				</div>
+				<div class=" self-center truncate">{$i18n.t('Admin Panel')}</div>
+			</DropdownMenu.Item>
 
 			{#if help}
 				<hr class=" border-gray-50/30 dark:border-gray-800/30 my-1 p-0" />
 
-				<!-- {$i18n.t('Help')} -->
+				<DropdownMenu.Item
+					as="a"
+					target="_blank"
+					class="flex gap-3 items-center py-1.5 px-3 text-sm select-none w-full cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-xl transition"
+					on:click={() => {
+						show = false;
+					}}
+					href="https://docs.openwebui.com"
+				>
+					<QuestionMarkCircle className="size-5" />
+					<div class="flex items-center">{$i18n.t('Documentation')}</div>
+				</DropdownMenu.Item>
 
-				{#if $user?.role === 'admin'}
-					<DropdownMenu.Item
-						as="a"
-						target="_blank"
-						class="flex gap-3 items-center py-1.5 px-3 text-sm select-none w-full cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-xl transition"
-						id="chat-share-button"
-						on:click={() => {
-							show = false;
-						}}
-						href="https://docs.openwebui.com"
-					>
-						<QuestionMarkCircle className="size-5" />
-						<div class="flex items-center">{$i18n.t('Documentation')}</div>
-					</DropdownMenu.Item>
-
-					<!-- Releases -->
-					<DropdownMenu.Item
-						as="a"
-						target="_blank"
-						class="flex gap-3 items-center py-1.5 px-3 text-sm select-none w-full cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-xl transition"
-						id="chat-share-button"
-						on:click={() => {
-							show = false;
-						}}
-						href="https://github.com/open-webui/open-webui/releases"
-					>
-						<Map className="size-5" />
-						<div class="flex items-center">{$i18n.t('Releases')}</div>
-					</DropdownMenu.Item>
-				{/if}
+				<DropdownMenu.Item
+					as="a"
+					target="_blank"
+					class="flex gap-3 items-center py-1.5 px-3 text-sm select-none w-full cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-xl transition"
+					on:click={() => {
+						show = false;
+					}}
+					href="https://github.com/open-webui/open-webui/releases"
+				>
+					<Map className="size-5" />
+					<div class="flex items-center">{$i18n.t('Releases')}</div>
+				</DropdownMenu.Item>
 
 				<DropdownMenu.Item
 					class="flex gap-3 items-center py-1.5 px-3 text-sm select-none w-full  hover:bg-gray-50 dark:hover:bg-gray-800 rounded-xl transition cursor-pointer"
-					id="chat-share-button"
 					on:click={async () => {
 						show = false;
 						showShortcuts.set(!$showShortcuts);
@@ -349,7 +339,7 @@
 				<div class=" self-center truncate">{$i18n.t('Sign Out')}</div>
 			</DropdownMenu.Item>
 
-			{#if showActiveUsers && ($config?.features?.enable_public_active_users_count || role === 'admin') && usage}
+			{#if showActiveUsers && $config?.features?.enable_public_active_users_count && usage}
 				{#if usage?.user_count}
 					<hr class=" border-gray-50/30 dark:border-gray-800/30 my-1 p-0" />
 
@@ -361,7 +351,7 @@
 						<div
 							class="flex rounded-xl py-1 px-3 text-xs gap-2.5 items-center"
 							on:mouseenter={() => {
-								if ($config?.features?.enable_public_active_users_count || role === 'admin') {
+								if ($config?.features?.enable_public_active_users_count) {
 									getUsageInfo();
 								}
 							}}
@@ -384,10 +374,6 @@
 					</Tooltip>
 				{/if}
 			{/if}
-
-			<!-- <DropdownMenu.Item class="flex items-center py-1.5 px-3 text-sm ">
-				<div class="flex items-center">Profile</div>
-			</DropdownMenu.Item> -->
 		</DropdownMenu.Content>
 	</slot>
 </DropdownMenu.Root>

@@ -1,8 +1,6 @@
 <script lang="ts">
 	import { onMount, getContext } from 'svelte';
-	import { goto } from '$app/navigation';
-
-	import { WEBUI_NAME, mobile, showSidebar, user } from '$lib/stores';
+	import { WEBUI_NAME, mobile, showSidebar } from '$lib/stores';
 	import { page } from '$app/stores';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 
@@ -13,9 +11,6 @@
 	let loaded = false;
 
 	onMount(async () => {
-		if ($user?.role !== 'admin') {
-			await goto('/');
-		}
 		loaded = true;
 	});
 </script>

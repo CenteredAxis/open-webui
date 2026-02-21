@@ -941,8 +941,7 @@ Provide the enhanced notes in markdown format. Use markdown syntax for headings,
 								type="text"
 								bind:value={note.title}
 								placeholder={titleGenerating ? $i18n.t('Generating...') : $i18n.t('Title')}
-								disabled={(note?.user_id !== $user?.id && $user?.role !== 'admin') ||
-									titleGenerating}
+								disabled={titleGenerating}
 								required
 								on:focus={() => {
 									titleInputFocused = true;
@@ -967,8 +966,7 @@ Provide the enhanced notes in markdown format. Use markdown syntax for headings,
 										<button
 											class=" self-center dark:hover:text-white transition"
 											id="generate-title-button"
-											disabled={(note?.user_id !== $user?.id && $user?.role !== 'admin') ||
-												titleGenerating}
+											disabled={titleGenerating}
 											on:mouseenter={() => {
 												ignoreBlur = true;
 											}}
@@ -1097,7 +1095,7 @@ Provide the enhanced notes in markdown format. Use markdown syntax for headings,
 										on:click={() => {
 											showAccessControlModal = true;
 										}}
-										disabled={note?.user_id !== $user?.id && $user?.role !== 'admin'}
+										disabled={false}
 									>
 										<LockClosed strokeWidth="2.5" className="size-3.5" />
 										{$i18n.t('Access')}

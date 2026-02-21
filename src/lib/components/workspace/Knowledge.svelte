@@ -272,15 +272,13 @@
 											{/if}
 										</div>
 
-										{#if item?.write_access || $user?.role === 'admin'}
+										{#if true}
 											<div class="flex items-center gap-2">
 												<div class=" flex self-center">
 													<ItemMenu
-														onExport={$user.role === 'admin'
-															? () => {
+														onExport={() => {
 																	exportHandler(item);
-																}
-															: null}
+																}}
 														on:delete={() => {
 															selectedItem = item;
 															showDeleteConfirm = true;

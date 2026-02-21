@@ -835,8 +835,8 @@
 		<AccessControlModal
 			bind:show={showAccessControlModal}
 			bind:accessGrants={knowledge.access_grants}
-			share={$user?.permissions?.sharing?.knowledge || $user?.role === 'admin'}
-			sharePublic={$user?.permissions?.sharing?.public_knowledge || $user?.role === 'admin'}
+			share={true}
+			sharePublic={true}
 			onChange={async () => {
 				try {
 					await updateKnowledgeAccessGrants(localStorage.token, id, knowledge.access_grants ?? []);

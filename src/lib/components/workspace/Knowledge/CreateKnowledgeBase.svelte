@@ -113,8 +113,8 @@
 			<AccessControl
 				bind:accessGrants
 				accessRoles={['read', 'write']}
-				share={$user?.permissions?.sharing?.knowledge || $user?.role === 'admin'}
-				sharePublic={$user?.permissions?.sharing?.public_knowledge || $user?.role === 'admin'}
+				share={true}
+				sharePublic={true}
 			/>
 		</div>
 

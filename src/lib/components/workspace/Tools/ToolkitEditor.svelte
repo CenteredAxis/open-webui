@@ -191,8 +191,8 @@ class Tools:
 	bind:show={showAccessControlModal}
 	bind:accessGrants
 	accessRoles={['read', 'write']}
-	share={$user?.permissions?.sharing?.tools || $user?.role === 'admin'}
-	sharePublic={$user?.permissions?.sharing?.public_tools || $user?.role === 'admin'}
+	share={true}
+	sharePublic={true}
 	onChange={async () => {
 		if (edit && id) {
 			try {

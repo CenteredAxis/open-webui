@@ -281,8 +281,8 @@
 	bind:show={showAccessControlModal}
 	bind:accessGrants
 	accessRoles={['read', 'write']}
-	share={$user?.permissions?.sharing?.prompts || $user?.role === 'admin'}
-	sharePublic={$user?.permissions?.sharing?.public_prompts || $user?.role === 'admin'}
+	share={true}
+	sharePublic={true}
 	onChange={async () => {
 		if (edit && prompt?.id) {
 			try {

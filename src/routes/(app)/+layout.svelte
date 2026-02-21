@@ -237,11 +237,7 @@
 				} else if (isShortcutMatch(event, shortcuts[Shortcut.NEW_TEMPORARY_CHAT])) {
 					console.log('Shortcut triggered: NEW_TEMPORARY_CHAT');
 					event.preventDefault();
-					if ($user?.role !== 'admin' && $user?.permissions?.chat?.temporary_enforced) {
-						temporaryChatEnabled.set(true);
-					} else {
-						temporaryChatEnabled.set(!$temporaryChatEnabled);
-					}
+					temporaryChatEnabled.set(!$temporaryChatEnabled);
 					await goto('/');
 					setTimeout(() => {
 						document.getElementById('new-chat-button')?.click();
@@ -262,22 +258,16 @@
 		};
 		setupKeyboardShortcuts();
 
-		if ($user?.role === 'admin' && ($settings?.showChangelog ?? true)) {
+		if ($settings?.showChangelog ?? true) {
 			showChangelog.set($settings?.version !== $config.version);
 		}
 
-		if ($user?.role === 'admin' || ($user?.permissions?.chat?.temporary ?? true)) {
-			if ($page.url.searchParams.get('temporary-chat') === 'true') {
-				temporaryChatEnabled.set(true);
-			}
-
-			if ($user?.role !== 'admin' && $user?.permissions?.chat?.temporary_enforced) {
-				temporaryChatEnabled.set(true);
-			}
+		if ($page.url.searchParams.get('temporary-chat') === 'true') {
+			temporaryChatEnabled.set(true);
 		}
 
 		// Check for version updates
-		if ($user?.role === 'admin' && $config?.features?.enable_version_update_check) {
+		if ($config?.features?.enable_version_update_check) {
 			// Check if the user has dismissed the update toast in the last 24 hours
 			if (localStorage.dismissedUpdateToast) {
 				const dismissedUpdateToast = new Date(Number(localStorage.dismissedUpdateToast));
