@@ -192,7 +192,7 @@
 				</div>
 			</div>
 
-			{#if $user?.role === 'admin' || ($user.permissions?.chat?.export ?? true)}
+			{#if true}
 				<div>
 					<div class="py-0.5 flex w-full justify-between">
 						<div class="self-center text-xs">{$i18n.t('Export Chats')}</div>

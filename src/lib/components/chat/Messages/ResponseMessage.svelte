@@ -1040,7 +1040,7 @@
 									</Tooltip>
 								{/if}
 
-								{#if $user?.role === 'admin' || ($user?.permissions?.chat?.tts ?? true)}
+								{#if true}
 									<Tooltip content={$i18n.t('Read Aloud')} placement="bottom">
 										<button
 											aria-label={$i18n.t('Read Aloud')}
@@ -1173,7 +1173,7 @@
 								{/if}
 
 								{#if !readOnly}
-									{#if !$temporaryChatEnabled && ($config?.features.enable_message_rating ?? true) && ($user?.role === 'admin' || ($user?.permissions?.chat?.rate_response ?? true))}
+									{#if !$temporaryChatEnabled && ($config?.features.enable_message_rating ?? true)}
 										<Tooltip content={$i18n.t('Good Response')} placement="bottom">
 											<button
 												aria-label={$i18n.t('Good Response')}
@@ -1251,7 +1251,7 @@
 										</Tooltip>
 									{/if}
 
-									{#if isLastMessage && ($user?.role === 'admin' || ($user?.permissions?.chat?.continue_response ?? true))}
+									{#if isLastMessage}
 										<Tooltip content={$i18n.t('Continue Response')} placement="bottom">
 											<button
 												aria-label={$i18n.t('Continue Response')}
@@ -1288,7 +1288,7 @@
 										</Tooltip>
 									{/if}
 
-									{#if $user?.role === 'admin' || ($user?.permissions?.chat?.regenerate_response ?? true)}
+									{#if true}
 										{#if $settings?.regenerateMenu ?? true}
 											<button
 												type="button"
@@ -1399,7 +1399,7 @@
 										{/if}
 									{/if}
 
-									{#if $user?.role === 'admin' || ($user?.permissions?.chat?.delete_message ?? true)}
+									{#if true}
 										{#if siblings.length > 1}
 											<Tooltip content={$i18n.t('Delete')} placement="bottom">
 												<button

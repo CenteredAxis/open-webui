@@ -546,7 +546,7 @@
 				</div>
 			</div>
 
-			{#if $user?.role === 'admin'}
+			{#if true}
 				<div>
 					<div class=" py-0.5 flex w-full justify-between">
 						<div id="toast-notifications-label" class=" self-center text-xs">
@@ -736,7 +736,7 @@
 				</div>
 			</div>
 
-			{#if $user.role === 'admin' || $user?.permissions?.chat?.temporary}
+			{#if true}
 				<div>
 					<div class=" py-0.5 flex w-full justify-between">
 						<div id="temp-chat-default-label" class=" self-center text-xs">

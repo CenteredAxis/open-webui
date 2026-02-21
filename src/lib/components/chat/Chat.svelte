@@ -928,9 +928,7 @@
 
 	const initNewChat = async () => {
 		console.log('initNewChat');
-		if ($user?.role !== 'admin' && $user?.permissions?.chat?.temporary_enforced) {
-			await temporaryChatEnabled.set(true);
-		}
+
 
 		if ($settings?.temporaryChatByDefault ?? false) {
 			if ($temporaryChatEnabled === false) {
@@ -941,9 +939,7 @@
 			}
 		}
 
-		if ($user?.role !== 'admin' && !$user?.permissions?.chat?.temporary) {
-			await temporaryChatEnabled.set(false);
-		}
+
 
 		const availableModels = $models
 			.filter((m) => !(m?.info?.meta?.hidden ?? false))
@@ -1136,9 +1132,7 @@
 						? chatContent.models
 						: [chatContent.models ?? ''];
 
-				if (!($user?.role === 'admin' || ($user?.permissions?.chat?.multiple_models ?? true))) {
-					selectedModels = selectedModels.length > 0 ? [selectedModels[0]] : [''];
-				}
+
 
 				oldSelectedModelIds = JSON.parse(JSON.stringify(selectedModels));
 
@@ -1882,18 +1876,15 @@
 			features = {
 				voice: $showCallOverlay,
 				image_generation:
-					$config?.features?.enable_image_generation &&
-					($user?.role === 'admin' || $user?.permissions?.features?.image_generation)
+					$config?.features?.enable_image_generation
 						? imageGenerationEnabled
 						: false,
 				code_interpreter:
-					$config?.features?.enable_code_interpreter &&
-					($user?.role === 'admin' || $user?.permissions?.features?.code_interpreter)
+					$config?.features?.enable_code_interpreter
 						? codeInterpreterEnabled
 						: false,
 				web_search:
-					$config?.features?.enable_web_search &&
-					($user?.role === 'admin' || $user?.permissions?.features?.web_search)
+					$config?.features?.enable_web_search
 						? webSearchEnabled
 						: false
 			};

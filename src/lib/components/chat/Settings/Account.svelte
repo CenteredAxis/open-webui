@@ -108,11 +108,10 @@
 
 		webhookUrl = $settings?.notifications?.webhook_url ?? '';
 
-		// Only fetch API key if the feature is enabled and user has permission
+		// Only fetch API key if the feature is enabled
 		if (
 			user &&
-			($config?.features?.enable_api_keys ?? true) &&
-			(user?.role === 'admin' || (user?.permissions?.features?.api_keys ?? false))
+			($config?.features?.enable_api_keys ?? true)
 		) {
 			APIKey = await getAPIKey(localStorage.token).catch((error) => {
 				console.log(error);
@@ -248,7 +247,7 @@
 			</div>
 		{/if}
 
-		{#if ($config?.features?.enable_api_keys ?? true) && ($user?.role === 'admin' || ($user?.permissions?.features?.api_keys ?? false))}
+		{#if ($config?.features?.enable_api_keys ?? true)}
 			<div class="flex justify-between items-center text-sm mt-2">
 				<div class="  font-medium">{$i18n.t('API keys')}</div>
 				<button
@@ -262,11 +261,10 @@
 
 			{#if showAPIKeys}
 				<div class="flex flex-col">
-					{#if $user?.role === 'admin'}
-						<div class="justify-between w-full mt-2">
-							<div class="flex justify-between w-full">
-								<div class="self-center text-xs font-medium mb-1">{$i18n.t('JWT Token')}</div>
-							</div>
+					<div class="justify-between w-full mt-2">
+						<div class="flex justify-between w-full">
+							<div class="self-center text-xs font-medium mb-1">{$i18n.t('JWT Token')}</div>
+						</div>
 
 							<div class="flex">
 								<SensitiveInput value={localStorage.token} readOnly={true} />
@@ -316,15 +314,11 @@
 								</button>
 							</div>
 						</div>
-					{/if}
-
-					{#if ($config?.features?.enable_api_keys ?? true) && ($user?.role === 'admin' || ($user?.permissions?.features?.api_keys ?? false))}
+					{#if ($config?.features?.enable_api_keys ?? true)}
 						<div class="justify-between w-full mt-2">
-							{#if $user?.role === 'admin'}
-								<div class="flex justify-between w-full">
-									<div class="self-center text-xs font-medium mb-1">{$i18n.t('API Key')}</div>
-								</div>
-							{/if}
+							<div class="flex justify-between w-full">
+								<div class="self-center text-xs font-medium mb-1">{$i18n.t('API Key')}</div>
+							</div>
 							<div class="flex">
 								{#if APIKey}
 									<SensitiveInput value={APIKey} readOnly={true} />

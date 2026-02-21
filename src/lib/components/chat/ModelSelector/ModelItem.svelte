@@ -75,7 +75,7 @@
 
 		<div class="flex items-center gap-2">
 			<div class="flex items-center min-w-fit">
-				<Tooltip content={$user?.role === 'admin' ? (item?.value ?? '') : ''} placement="top-start">
+				<Tooltip content={item?.value ?? ''} placement="top-start">
 					<img
 						src={`${WEBUI_API_BASE_URL}/models/model/profile/image?id=${item.model.id}&lang=${$i18n.language}`}
 						alt="Model"
@@ -228,7 +228,7 @@
 	</div>
 
 	<div class="ml-auto pl-2 pr-1 flex items-center gap-1.5 shrink-0">
-		{#if $user?.role === 'admin' && item.model.owned_by === 'ollama' && item.model.ollama?.expires_at && new Date(item.model.ollama?.expires_at * 1000) > new Date()}
+		{#if item.model.owned_by === 'ollama' && item.model.ollama?.expires_at && new Date(item.model.ollama?.expires_at * 1000) > new Date()}
 			<Tooltip
 				content={`${$i18n.t('Eject')}`}
 				className="flex-shrink-0 group-hover/item:opacity-100 opacity-0 "

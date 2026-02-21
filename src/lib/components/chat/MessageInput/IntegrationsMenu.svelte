@@ -55,8 +55,7 @@
 
 	let fileUploadEnabled = true;
 	$: fileUploadEnabled =
-		fileUploadCapableModels.length === selectedModels.length &&
-		($user?.role === 'admin' || $user?.permissions?.chat?.file_upload);
+		fileUploadCapableModels.length === selectedModels.length;
 
 	const init = async () => {
 		if ($_tools === null) {
@@ -178,7 +177,7 @@
 										</div>
 									</div>
 
-									{#if filter?.has_user_valves && ($user?.role === 'admin' || ($user?.permissions?.chat?.valves ?? true))}
+									{#if filter?.has_user_valves}
 										<div class=" shrink-0">
 											<Tooltip content={$i18n.t('Valves')}>
 												<button
@@ -371,7 +370,7 @@
 								</div>
 							</div>
 
-							{#if tools[toolId]?.has_user_valves && ($user?.role === 'admin' || ($user?.permissions?.chat?.valves ?? true))}
+							{#if tools[toolId]?.has_user_valves}
 								<div class=" shrink-0">
 									<Tooltip content={$i18n.t('Valves')}>
 										<button

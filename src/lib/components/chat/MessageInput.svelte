@@ -484,22 +484,19 @@
 	$: showWebSearchButton =
 		(atSelectedModel?.id ? [atSelectedModel.id] : selectedModels).length ===
 			webSearchCapableModels.length &&
-		$config?.features?.enable_web_search &&
-		($_user.role === 'admin' || $_user?.permissions?.features?.web_search);
+		$config?.features?.enable_web_search;
 
 	let showImageGenerationButton = false;
 	$: showImageGenerationButton =
 		(atSelectedModel?.id ? [atSelectedModel.id] : selectedModels).length ===
 			imageGenerationCapableModels.length &&
-		$config?.features?.enable_image_generation &&
-		($_user.role === 'admin' || $_user?.permissions?.features?.image_generation);
+		$config?.features?.enable_image_generation;
 
 	let showCodeInterpreterButton = false;
 	$: showCodeInterpreterButton =
 		(atSelectedModel?.id ? [atSelectedModel.id] : selectedModels).length ===
 			codeInterpreterCapableModels.length &&
-		$config?.features?.enable_code_interpreter &&
-		($_user.role === 'admin' || $_user?.permissions?.features?.code_interpreter);
+		$config?.features?.enable_code_interpreter;
 
 	const scrollToBottom = () => {
 		const element = document.getElementById('messages-container');
@@ -548,11 +545,6 @@
 	};
 
 	const uploadFileHandler = async (file, process = true, itemData = {}) => {
-		if ($_user?.role !== 'admin' && !($_user?.permissions?.chat?.file_upload ?? true)) {
-			toast.error($i18n.t('You do not have permission to upload files.'));
-			return null;
-		}
-
 		if (fileUploadCapableModels.length !== selectedModels.length) {
 			toast.error($i18n.t('Model(s) do not support file upload'));
 			return null;
@@ -1753,7 +1745,7 @@
 											</Tooltip>
 										</div>
 									{:else}
-										{#if prompt !== '' && !history?.currentId && ($config?.features?.enable_notes ?? false) && ($_user?.role === 'admin' || ($_user?.permissions?.features?.notes ?? true))}
+										{#if prompt !== '' && !history?.currentId && ($config?.features?.enable_notes ?? false)}
 											<!-- {$i18n.t('Create Note')}  -->
 											<Tooltip content={$i18n.t('Create note')} className=" flex items-center">
 												<button
@@ -1770,7 +1762,7 @@
 											</Tooltip>
 										{/if}
 
-										{#if (!history?.currentId || history.messages[history.currentId]?.done == true) && ($_user?.role === 'admin' || ($_user?.permissions?.chat?.stt ?? true))}
+										{#if (!history?.currentId || history.messages[history.currentId]?.done == true)}
 											<!-- {$i18n.t('Record voice')} -->
 											<Tooltip content={$i18n.t('Dictate')}>
 												<button
@@ -1820,7 +1812,7 @@
 											</Tooltip>
 										{/if}
 
-										{#if prompt === '' && files.length === 0 && ($_user?.role === 'admin' || ($_user?.permissions?.chat?.call ?? true))}
+										{#if prompt === '' && files.length === 0}
 											<div class=" flex items-center">
 												<!-- {$i18n.t('Call')} -->
 												<Tooltip content={$i18n.t('Voice mode')}>
