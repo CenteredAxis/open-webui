@@ -1,248 +1,57 @@
 import { WEBUI_API_BASE_URL } from '$lib/constants';
+import { fetchAPI } from '$lib/utils/api';
 
 export const createNewKnowledge = async (
 	token: string,
 	name: string,
 	description: string,
 	accessGrants: object[]
-) => {
-	let error = null;
-
-	const res = await fetch(`${WEBUI_API_BASE_URL}/knowledge/create`, {
+) =>
+	fetchAPI('/knowledge/create', {
 		method: 'POST',
-		headers: {
-			Accept: 'application/json',
-			'Content-Type': 'application/json',
-			authorization: `Bearer ${token}`
-		},
-		body: JSON.stringify({
-			name: name,
-			description: description,
-			access_grants: accessGrants
-		})
-	})
-		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
-		})
-		.catch((err) => {
-			error = err.detail;
-			console.error(err);
-			return null;
-		});
+		token,
+		body: { name, description, access_grants: accessGrants }
+	});
 
-	if (error) {
-		throw error;
-	}
-
-	return res;
-};
-
-export const getKnowledgeBases = async (token: string = '', page: number | null = null) => {
-	let error = null;
-
-	const searchParams = new URLSearchParams();
-	if (page) searchParams.append('page', page.toString());
-
-	const res = await fetch(`${WEBUI_API_BASE_URL}/knowledge/?${searchParams.toString()}`, {
-		method: 'GET',
-		headers: {
-			Accept: 'application/json',
-			'Content-Type': 'application/json',
-			authorization: `Bearer ${token}`
-		}
-	})
-		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
-		})
-		.then((json) => {
-			return json;
-		})
-		.catch((err) => {
-			error = err.detail;
-			console.error(err);
-			return null;
-		});
-
-	if (error) {
-		throw error;
-	}
-
-	return res;
-};
+export const getKnowledgeBases = async (token: string = '', page: number | null = null) =>
+	fetchAPI('/knowledge/', { token, params: { page } });
 
 export const searchKnowledgeBases = async (
 	token: string = '',
 	query: string | null = null,
 	viewOption: string | null = null,
 	page: number | null = null
-) => {
-	let error = null;
-
-	const searchParams = new URLSearchParams();
-	if (query) searchParams.append('query', query);
-	if (viewOption) searchParams.append('view_option', viewOption);
-	if (page) searchParams.append('page', page.toString());
-
-	const res = await fetch(`${WEBUI_API_BASE_URL}/knowledge/search?${searchParams.toString()}`, {
-		method: 'GET',
-		headers: {
-			Accept: 'application/json',
-			'Content-Type': 'application/json',
-			authorization: `Bearer ${token}`
-		}
-	})
-		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
-		})
-		.then((json) => {
-			return json;
-		})
-		.catch((err) => {
-			error = err.detail;
-			console.error(err);
-			return null;
-		});
-
-	if (error) {
-		throw error;
-	}
-
-	return res;
-};
+) => fetchAPI('/knowledge/search', { token, params: { query, view_option: viewOption, page } });
 
 export const searchKnowledgeFiles = async (
 	token: string,
-	query?: string | null = null,
-	viewOption?: string | null = null,
-	orderBy?: string | null = null,
-	direction?: string | null = null,
+	query?: string | null,
+	viewOption?: string | null,
+	orderBy?: string | null,
+	direction?: string | null,
 	page: number = 1
-) => {
-	let error = null;
+) =>
+	fetchAPI('/knowledge/search/files', {
+		token,
+		params: { query, view_option: viewOption, order_by: orderBy, direction, page }
+	});
 
-	const searchParams = new URLSearchParams();
-	if (query) searchParams.append('query', query);
-	if (viewOption) searchParams.append('view_option', viewOption);
-	if (orderBy) searchParams.append('order_by', orderBy);
-	if (direction) searchParams.append('direction', direction);
-	searchParams.append('page', page.toString());
-
-	const res = await fetch(
-		`${WEBUI_API_BASE_URL}/knowledge/search/files?${searchParams.toString()}`,
-		{
-			method: 'GET',
-			headers: {
-				Accept: 'application/json',
-				'Content-Type': 'application/json',
-				authorization: `Bearer ${token}`
-			}
-		}
-	)
-		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
-		})
-		.then((json) => {
-			return json;
-		})
-		.catch((err) => {
-			error = err.detail;
-
-			console.error(err);
-			return null;
-		});
-
-	if (error) {
-		throw error;
-	}
-
-	return res;
-};
-
-export const getKnowledgeById = async (token: string, id: string) => {
-	let error = null;
-
-	const res = await fetch(`${WEBUI_API_BASE_URL}/knowledge/${id}`, {
-		method: 'GET',
-		headers: {
-			Accept: 'application/json',
-			'Content-Type': 'application/json',
-			authorization: `Bearer ${token}`
-		}
-	})
-		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
-		})
-		.then((json) => {
-			return json;
-		})
-		.catch((err) => {
-			error = err.detail;
-
-			console.error(err);
-			return null;
-		});
-
-	if (error) {
-		throw error;
-	}
-
-	return res;
-};
+export const getKnowledgeById = async (token: string, id: string) =>
+	fetchAPI(`/knowledge/${id}`, { token });
 
 export const searchKnowledgeFilesById = async (
 	token: string,
 	id: string,
-	query?: string | null = null,
-	viewOption?: string | null = null,
-	orderBy?: string | null = null,
-	direction?: string | null = null,
+	query?: string | null,
+	viewOption?: string | null,
+	orderBy?: string | null,
+	direction?: string | null,
 	page: number = 1
-) => {
-	let error = null;
-
-	const searchParams = new URLSearchParams();
-	if (query) searchParams.append('query', query);
-	if (viewOption) searchParams.append('view_option', viewOption);
-	if (orderBy) searchParams.append('order_by', orderBy);
-	if (direction) searchParams.append('direction', direction);
-	searchParams.append('page', page.toString());
-
-	const res = await fetch(
-		`${WEBUI_API_BASE_URL}/knowledge/${id}/files?${searchParams.toString()}`,
-		{
-			method: 'GET',
-			headers: {
-				Accept: 'application/json',
-				'Content-Type': 'application/json',
-				authorization: `Bearer ${token}`
-			}
-		}
-	)
-		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
-		})
-		.then((json) => {
-			return json;
-		})
-		.catch((err) => {
-			error = err.detail;
-
-			console.error(err);
-			return null;
-		});
-
-	if (error) {
-		throw error;
-	}
-
-	return res;
-};
+) =>
+	fetchAPI(`/knowledge/${id}/files`, {
+		token,
+		params: { query, view_option: viewOption, order_by: orderBy, direction, page }
+	});
 
 type KnowledgeUpdateForm = {
 	name?: string;
@@ -251,274 +60,48 @@ type KnowledgeUpdateForm = {
 	access_grants?: object[];
 };
 
-export const updateKnowledgeById = async (token: string, id: string, form: KnowledgeUpdateForm) => {
-	let error = null;
-
-	const res = await fetch(`${WEBUI_API_BASE_URL}/knowledge/${id}/update`, {
+export const updateKnowledgeById = async (token: string, id: string, form: KnowledgeUpdateForm) =>
+	fetchAPI(`/knowledge/${id}/update`, {
 		method: 'POST',
-		headers: {
-			Accept: 'application/json',
-			'Content-Type': 'application/json',
-			authorization: `Bearer ${token}`
-		},
-		body: JSON.stringify({
+		token,
+		body: {
 			name: form?.name ? form.name : undefined,
 			description: form?.description ? form.description : undefined,
 			data: form?.data ? form.data : undefined,
 			access_grants: form.access_grants
-		})
-	})
-		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
-		})
-		.then((json) => {
-			return json;
-		})
-		.catch((err) => {
-			error = err.detail;
-
-			console.error(err);
-			return null;
-		});
-
-	if (error) {
-		throw error;
-	}
-
-	return res;
-};
+		}
+	});
 
 export const updateKnowledgeAccessGrants = async (
 	token: string,
 	id: string,
 	accessGrants: any[]
-) => {
-	let error = null;
-
-	const res = await fetch(`${WEBUI_API_BASE_URL}/knowledge/${id}/access/update`, {
+) =>
+	fetchAPI(`/knowledge/${id}/access/update`, {
 		method: 'POST',
-		headers: {
-			Accept: 'application/json',
-			'Content-Type': 'application/json',
-			authorization: `Bearer ${token}`
-		},
-		body: JSON.stringify({ access_grants: accessGrants })
-	})
-		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
-		})
-		.catch((err) => {
-			error = err.detail;
-			console.error(err);
-			return null;
-		});
+		token,
+		body: { access_grants: accessGrants }
+	});
 
-	if (error) {
-		throw error;
-	}
+export const addFileToKnowledgeById = async (token: string, id: string, fileId: string) =>
+	fetchAPI(`/knowledge/${id}/file/add`, { method: 'POST', token, body: { file_id: fileId } });
 
-	return res;
-};
+export const updateFileFromKnowledgeById = async (token: string, id: string, fileId: string) =>
+	fetchAPI(`/knowledge/${id}/file/update`, { method: 'POST', token, body: { file_id: fileId } });
 
-export const addFileToKnowledgeById = async (token: string, id: string, fileId: string) => {
-	let error = null;
+export const removeFileFromKnowledgeById = async (token: string, id: string, fileId: string) =>
+	fetchAPI(`/knowledge/${id}/file/remove`, { method: 'POST', token, body: { file_id: fileId } });
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/knowledge/${id}/file/add`, {
-		method: 'POST',
-		headers: {
-			Accept: 'application/json',
-			'Content-Type': 'application/json',
-			authorization: `Bearer ${token}`
-		},
-		body: JSON.stringify({
-			file_id: fileId
-		})
-	})
-		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
-		})
-		.then((json) => {
-			return json;
-		})
-		.catch((err) => {
-			error = err.detail;
+export const resetKnowledgeById = async (token: string, id: string) =>
+	fetchAPI(`/knowledge/${id}/reset`, { method: 'POST', token });
 
-			console.error(err);
-			return null;
-		});
+export const deleteKnowledgeById = async (token: string, id: string) =>
+	fetchAPI(`/knowledge/${id}/delete`, { method: 'DELETE', token });
 
-	if (error) {
-		throw error;
-	}
+export const reindexKnowledgeFiles = async (token: string) =>
+	fetchAPI('/knowledge/reindex', { method: 'POST', token });
 
-	return res;
-};
-
-export const updateFileFromKnowledgeById = async (token: string, id: string, fileId: string) => {
-	let error = null;
-
-	const res = await fetch(`${WEBUI_API_BASE_URL}/knowledge/${id}/file/update`, {
-		method: 'POST',
-		headers: {
-			Accept: 'application/json',
-			'Content-Type': 'application/json',
-			authorization: `Bearer ${token}`
-		},
-		body: JSON.stringify({
-			file_id: fileId
-		})
-	})
-		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
-		})
-		.then((json) => {
-			return json;
-		})
-		.catch((err) => {
-			error = err.detail;
-
-			console.error(err);
-			return null;
-		});
-
-	if (error) {
-		throw error;
-	}
-
-	return res;
-};
-
-export const removeFileFromKnowledgeById = async (token: string, id: string, fileId: string) => {
-	let error = null;
-
-	const res = await fetch(`${WEBUI_API_BASE_URL}/knowledge/${id}/file/remove`, {
-		method: 'POST',
-		headers: {
-			Accept: 'application/json',
-			'Content-Type': 'application/json',
-			authorization: `Bearer ${token}`
-		},
-		body: JSON.stringify({
-			file_id: fileId
-		})
-	})
-		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
-		})
-		.then((json) => {
-			return json;
-		})
-		.catch((err) => {
-			error = err.detail;
-
-			console.error(err);
-			return null;
-		});
-
-	if (error) {
-		throw error;
-	}
-
-	return res;
-};
-
-export const resetKnowledgeById = async (token: string, id: string) => {
-	let error = null;
-
-	const res = await fetch(`${WEBUI_API_BASE_URL}/knowledge/${id}/reset`, {
-		method: 'POST',
-		headers: {
-			Accept: 'application/json',
-			'Content-Type': 'application/json',
-			authorization: `Bearer ${token}`
-		}
-	})
-		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
-		})
-		.then((json) => {
-			return json;
-		})
-		.catch((err) => {
-			error = err.detail;
-
-			console.error(err);
-			return null;
-		});
-
-	if (error) {
-		throw error;
-	}
-
-	return res;
-};
-
-export const deleteKnowledgeById = async (token: string, id: string) => {
-	let error = null;
-
-	const res = await fetch(`${WEBUI_API_BASE_URL}/knowledge/${id}/delete`, {
-		method: 'DELETE',
-		headers: {
-			Accept: 'application/json',
-			'Content-Type': 'application/json',
-			authorization: `Bearer ${token}`
-		}
-	})
-		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
-		})
-		.then((json) => {
-			return json;
-		})
-		.catch((err) => {
-			error = err.detail;
-
-			console.error(err);
-			return null;
-		});
-
-	if (error) {
-		throw error;
-	}
-
-	return res;
-};
-
-export const reindexKnowledgeFiles = async (token: string) => {
-	let error = null;
-
-	const res = await fetch(`${WEBUI_API_BASE_URL}/knowledge/reindex`, {
-		method: 'POST',
-		headers: {
-			Accept: 'application/json',
-			'Content-Type': 'application/json',
-			authorization: `Bearer ${token}`
-		}
-	})
-		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
-		})
-		.catch((err) => {
-			error = err.detail;
-			console.error(err);
-			return null;
-		});
-
-	if (error) {
-		throw error;
-	}
-
-	return res;
-};
-
+// exportKnowledgeById returns a Blob (file download) — keep as raw fetch
 export const exportKnowledgeById = async (token: string, id: string) => {
 	let error = null;
 

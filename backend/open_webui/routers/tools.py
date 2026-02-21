@@ -5,7 +5,6 @@ import time
 import re
 import aiohttp
 from open_webui.env import AIOHTTP_CLIENT_TIMEOUT
-from open_webui.models.groups import Groups
 from pydantic import BaseModel, HttpUrl
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy.orm import Session
@@ -30,7 +29,7 @@ from open_webui.utils.plugin import (
 )
 from open_webui.utils.tools import get_tool_specs
 from open_webui.utils.auth import get_admin_user, get_verified_user
-from open_webui.utils.access_control import has_access, has_permission
+from open_webui.utils.access_control import get_user_group_ids, has_access, has_permission
 from open_webui.utils.tools import get_tool_servers
 
 from open_webui.config import CACHE_DIR, BYPASS_ADMIN_ACCESS_CONTROL
@@ -157,9 +156,7 @@ async def get_tools(
         # Admin can see all tools
         return tools
     else:
-        user_group_ids = {
-            group.id for group in Groups.get_groups_by_member_id(user.id, db=db)
-        }
+        user_group_ids = get_user_group_ids(user.id, db=db)
         tools = [
             tool
             for tool in tools

@@ -46,7 +46,7 @@ from open_webui.internal.db import get_session
 
 from open_webui.models.models import Models
 from open_webui.models.access_grants import AccessGrants
-from open_webui.models.groups import Groups
+from open_webui.utils.access_control import get_user_group_ids
 from open_webui.utils.misc import (
     calculate_sha256,
     cleanup_response,
@@ -193,6 +193,11 @@ def get_api_key(idx, url, configs):
     )  # Legacy support
 
 
+def get_api_config(configs: dict, idx: int, url: str) -> dict:
+    """Return the API config for the given index, with legacy URL-key fallback."""
+    return configs.get(str(idx), configs.get(url, {}))
+
+
 ##########################################
 #
 # API routes
@@ -328,12 +333,7 @@ async def get_all_models(request: Request, user: UserModel = None):
             ):
                 request_tasks.append(send_get_request(f"{url}/api/tags", user=user))
             else:
-                api_config = request.app.state.config.OLLAMA_API_CONFIGS.get(
-                    str(idx),
-                    request.app.state.config.OLLAMA_API_CONFIGS.get(
-                        url, {}
-                    ),  # Legacy support
-                )
+                api_config = get_api_config(request.app.state.config.OLLAMA_API_CONFIGS, idx, url)
 
                 enable = api_config.get("enable", True)
                 key = api_config.get("key", None)
@@ -350,12 +350,7 @@ async def get_all_models(request: Request, user: UserModel = None):
         for idx, response in enumerate(responses):
             if response:
                 url = request.app.state.config.OLLAMA_BASE_URLS[idx]
-                api_config = request.app.state.config.OLLAMA_API_CONFIGS.get(
-                    str(idx),
-                    request.app.state.config.OLLAMA_API_CONFIGS.get(
-                        url, {}
-                    ),  # Legacy support
-                )
+                api_config = get_api_config(request.app.state.config.OLLAMA_API_CONFIGS, idx, url)
 
                 connection_type = api_config.get("connection_type", "local")
 
@@ -422,9 +417,7 @@ async def get_filtered_models(models, user, db=None):
         model_info.id: model_info
         for model_info in Models.get_models_by_ids(model_ids, db=db)
     }
-    user_group_ids = {
-        group.id for group in Groups.get_groups_by_member_id(user.id, db=db)
-    }
+    user_group_ids = get_user_group_ids(user.id, db=db)
 
     # Batch-fetch accessible resource IDs in a single query instead of N has_access calls
     accessible_model_ids = AccessGrants.get_accessible_resource_ids(
@@ -514,12 +507,7 @@ async def get_ollama_loaded_models(request: Request, user=Depends(get_admin_user
             ):
                 request_tasks.append(send_get_request(f"{url}/api/ps", user=user))
             else:
-                api_config = request.app.state.config.OLLAMA_API_CONFIGS.get(
-                    str(idx),
-                    request.app.state.config.OLLAMA_API_CONFIGS.get(
-                        url, {}
-                    ),  # Legacy support
-                )
+                api_config = get_api_config(request.app.state.config.OLLAMA_API_CONFIGS, idx, url)
 
                 enable = api_config.get("enable", True)
                 key = api_config.get("key", None)
@@ -536,12 +524,7 @@ async def get_ollama_loaded_models(request: Request, user=Depends(get_admin_user
         for idx, response in enumerate(responses):
             if response:
                 url = request.app.state.config.OLLAMA_BASE_URLS[idx]
-                api_config = request.app.state.config.OLLAMA_API_CONFIGS.get(
-                    str(idx),
-                    request.app.state.config.OLLAMA_API_CONFIGS.get(
-                        url, {}
-                    ),  # Legacy support
-                )
+                api_config = get_api_config(request.app.state.config.OLLAMA_API_CONFIGS, idx, url)
 
                 prefix_id = api_config.get("prefix_id", None)
 
@@ -572,12 +555,7 @@ async def get_ollama_versions(request: Request, url_idx: Optional[int] = None):
             request_tasks = []
 
             for idx, url in enumerate(request.app.state.config.OLLAMA_BASE_URLS):
-                api_config = request.app.state.config.OLLAMA_API_CONFIGS.get(
-                    str(idx),
-                    request.app.state.config.OLLAMA_API_CONFIGS.get(
-                        url, {}
-                    ),  # Legacy support
-                )
+                api_config = get_api_config(request.app.state.config.OLLAMA_API_CONFIGS, idx, url)
 
                 enable = api_config.get("enable", True)
                 key = api_config.get("key", None)
@@ -1337,9 +1315,7 @@ async def generate_chat_completion(
 
         # Check if user has access to the model
         if not bypass_filter and user.role == "user":
-            user_group_ids = {
-                group.id for group in Groups.get_groups_by_member_id(user.id)
-            }
+            user_group_ids = get_user_group_ids(user.id)
             if not (
                 user.id == model_info.user_id
                 or AccessGrants.has_access(
@@ -1448,9 +1424,7 @@ async def generate_openai_completion(
 
         # Check if user has access to the model
         if user.role == "user":
-            user_group_ids = {
-                group.id for group in Groups.get_groups_by_member_id(user.id)
-            }
+            user_group_ids = get_user_group_ids(user.id)
             if not (
                 user.id == model_info.user_id
                 or AccessGrants.has_access(
@@ -1536,9 +1510,7 @@ async def generate_openai_chat_completion(
 
         # Check if user has access to the model
         if user.role == "user":
-            user_group_ids = {
-                group.id for group in Groups.get_groups_by_member_id(user.id)
-            }
+            user_group_ids = get_user_group_ids(user.id)
             if not (
                 user.id == model_info.user_id
                 or AccessGrants.has_access(
@@ -1642,9 +1614,7 @@ async def get_openai_models(
             model_info.id: model_info
             for model_info in Models.get_models_by_ids(model_ids, db=db)
         }
-        user_group_ids = {
-            group.id for group in Groups.get_groups_by_member_id(user.id, db=db)
-        }
+        user_group_ids = get_user_group_ids(user.id, db=db)
 
         # Batch-fetch accessible resource IDs in a single query instead of N has_access calls
         accessible_model_ids = AccessGrants.get_accessible_resource_ids(

@@ -1,4 +1,4 @@
-import { WEBUI_API_BASE_URL } from '$lib/constants';
+import { fetchAPI } from '$lib/utils/api';
 
 type PromptItem = {
 	id?: string; // Prompt ID
@@ -45,96 +45,19 @@ type PromptDiff = {
 	access_grants_changed: boolean;
 };
 
-export const createNewPrompt = async (token: string, prompt: PromptItem) => {
-	let error = null;
-
-	const res = await fetch(`${WEBUI_API_BASE_URL}/prompts/create`, {
+export const createNewPrompt = async (token: string, prompt: PromptItem) =>
+	fetchAPI('/prompts/create', {
 		method: 'POST',
-		headers: {
-			Accept: 'application/json',
-			'Content-Type': 'application/json',
-			authorization: `Bearer ${token}`
-		},
-		body: JSON.stringify({
+		token,
+		body: {
 			...prompt,
 			command: prompt.command.startsWith('/') ? prompt.command.slice(1) : prompt.command
-		})
-	})
-		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
-		})
-		.catch((err) => {
-			error = err.detail;
-			console.error(err);
-			return null;
-		});
-
-	if (error) {
-		throw error;
-	}
-
-	return res;
-};
-
-export const getPrompts = async (token: string = '') => {
-	let error = null;
-
-	const res = await fetch(`${WEBUI_API_BASE_URL}/prompts/`, {
-		method: 'GET',
-		headers: {
-			Accept: 'application/json',
-			'Content-Type': 'application/json',
-			authorization: `Bearer ${token}`
 		}
-	})
-		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
-		})
-		.then((json) => {
-			return json;
-		})
-		.catch((err) => {
-			error = err.detail;
-			console.error(err);
-			return null;
-		});
+	});
 
-	if (error) {
-		throw error;
-	}
+export const getPrompts = async (token: string = '') => fetchAPI('/prompts/', { token });
 
-	return res;
-};
-
-export const getPromptTags = async (token: string = '') => {
-	let error = null;
-
-	const res = await fetch(`${WEBUI_API_BASE_URL}/prompts/tags`, {
-		method: 'GET',
-		headers: {
-			Accept: 'application/json',
-			'Content-Type': 'application/json',
-			authorization: `Bearer ${token}`
-		}
-	})
-		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
-		})
-		.catch((err) => {
-			error = err.detail;
-			console.error(err);
-			return null;
-		});
-
-	if (error) {
-		throw error;
-	}
-
-	return res;
-};
+export const getPromptTags = async (token: string = '') => fetchAPI('/prompts/tags', { token });
 
 export const getPromptItems = async (
 	token: string = '',
@@ -144,186 +67,31 @@ export const getPromptItems = async (
 	orderBy: string | null,
 	direction: string | null,
 	page: number
-) => {
-	let error = null;
-
-	const searchParams = new URLSearchParams();
-	if (query) {
-		searchParams.append('query', query);
-	}
-	if (viewOption) {
-		searchParams.append('view_option', viewOption);
-	}
-	if (selectedTag) {
-		searchParams.append('tag', selectedTag);
-	}
-	if (orderBy) {
-		searchParams.append('order_by', orderBy);
-	}
-	if (direction) {
-		searchParams.append('direction', direction);
-	}
-	if (page) {
-		searchParams.append('page', page.toString());
-	}
-
-	const res = await fetch(`${WEBUI_API_BASE_URL}/prompts/list?${searchParams.toString()}`, {
-		method: 'GET',
-		headers: {
-			Accept: 'application/json',
-			'Content-Type': 'application/json',
-			authorization: `Bearer ${token}`
+) =>
+	fetchAPI('/prompts/list', {
+		token,
+		params: {
+			query,
+			view_option: viewOption,
+			tag: selectedTag,
+			order_by: orderBy,
+			direction,
+			page
 		}
-	})
-		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
-		})
-		.then((json) => {
-			return json;
-		})
-		.catch((err) => {
-			error = err;
-			console.error(err);
-			return null;
-		});
+	});
 
-	if (error) {
-		throw error;
-	}
-
-	return res;
-};
-
-export const getPromptList = async (token: string = '') => {
-	let error = null;
-
-	const res = await fetch(`${WEBUI_API_BASE_URL}/prompts/list`, {
-		method: 'GET',
-		headers: {
-			Accept: 'application/json',
-			'Content-Type': 'application/json',
-			authorization: `Bearer ${token}`
-		}
-	})
-		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
-		})
-		.then((json) => {
-			return json;
-		})
-		.catch((err) => {
-			error = err.detail;
-			console.error(err);
-			return null;
-		});
-
-	if (error) {
-		throw error;
-	}
-
-	return res;
-};
+export const getPromptList = async (token: string = '') => fetchAPI('/prompts/list', { token });
 
 export const getPromptByCommand = async (token: string, command: string) => {
-	let error = null;
-
 	command = command.charAt(0) === '/' ? command.slice(1) : command;
-
-	const res = await fetch(`${WEBUI_API_BASE_URL}/prompts/command/${command}`, {
-		method: 'GET',
-		headers: {
-			Accept: 'application/json',
-			'Content-Type': 'application/json',
-			authorization: `Bearer ${token}`
-		}
-	})
-		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
-		})
-		.then((json) => {
-			return json;
-		})
-		.catch((err) => {
-			error = err.detail;
-
-			console.error(err);
-			return null;
-		});
-
-	if (error) {
-		throw error;
-	}
-
-	return res;
+	return fetchAPI(`/prompts/command/${command}`, { token });
 };
 
-export const getPromptById = async (token: string, promptId: string) => {
-	let error = null;
+export const getPromptById = async (token: string, promptId: string) =>
+	fetchAPI(`/prompts/id/${promptId}`, { token });
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/prompts/id/${promptId}`, {
-		method: 'GET',
-		headers: {
-			Accept: 'application/json',
-			'Content-Type': 'application/json',
-			authorization: `Bearer ${token}`
-		}
-	})
-		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
-		})
-		.then((json) => {
-			return json;
-		})
-		.catch((err) => {
-			error = err.detail;
-
-			console.error(err);
-			return null;
-		});
-
-	if (error) {
-		throw error;
-	}
-
-	return res;
-};
-
-export const updatePromptById = async (token: string, prompt: PromptItem) => {
-	let error = null;
-
-	const res = await fetch(`${WEBUI_API_BASE_URL}/prompts/id/${prompt.id}/update`, {
-		method: 'POST',
-		headers: {
-			Accept: 'application/json',
-			'Content-Type': 'application/json',
-			authorization: `Bearer ${token}`
-		},
-		body: JSON.stringify(prompt)
-	})
-		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
-		})
-		.then((json) => {
-			return json;
-		})
-		.catch((err) => {
-			error = err.detail;
-
-			console.error(err);
-			return null;
-		});
-
-	if (error) {
-		throw error;
-	}
-
-	return res;
-};
+export const updatePromptById = async (token: string, prompt: PromptItem) =>
+	fetchAPI(`/prompts/id/${prompt.id}/update`, { method: 'POST', token, body: prompt });
 
 export const updatePromptMetadata = async (
 	token: string,
@@ -331,134 +99,37 @@ export const updatePromptMetadata = async (
 	name: string,
 	command: string,
 	tags: string[] = []
-) => {
-	let error = null;
-
-	const res = await fetch(`${WEBUI_API_BASE_URL}/prompts/id/${promptId}/update/meta`, {
+) =>
+	fetchAPI(`/prompts/id/${promptId}/update/meta`, {
 		method: 'POST',
-		headers: {
-			Accept: 'application/json',
-			'Content-Type': 'application/json',
-			authorization: `Bearer ${token}`
-		},
-		body: JSON.stringify({ name, command, tags })
-	})
-		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
-		})
-		.catch((err) => {
-			error = err.detail;
-			console.error(err);
-			return null;
-		});
-
-	if (error) {
-		throw error;
-	}
-
-	return res;
-};
+		token,
+		body: { name, command, tags }
+	});
 
 export const setProductionPromptVersion = async (
 	token: string,
 	promptId: string,
 	version_id: string
-) => {
-	let error = null;
-
-	const res = await fetch(`${WEBUI_API_BASE_URL}/prompts/id/${promptId}/update/version`, {
+) =>
+	fetchAPI(`/prompts/id/${promptId}/update/version`, {
 		method: 'POST',
-		headers: {
-			Accept: 'application/json',
-			'Content-Type': 'application/json',
-			Authorization: `Bearer ${token}`
-		},
-		body: JSON.stringify({
-			version_id: version_id
-		})
-	})
-		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
-		})
-		.catch((err) => {
-			console.log(err);
-			error = err.detail;
-			return null;
-		});
+		token,
+		body: { version_id }
+	});
 
-	if (error) {
-		throw error;
-	}
-
-	return res;
-};
-
-export const deletePromptById = async (token: string, promptId: string) => {
-	let error = null;
-
-	const res = await fetch(`${WEBUI_API_BASE_URL}/prompts/id/${promptId}/delete`, {
-		method: 'DELETE',
-		headers: {
-			Accept: 'application/json',
-			'Content-Type': 'application/json',
-			authorization: `Bearer ${token}`
-		}
-	})
-		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
-		})
-		.then((json) => {
-			return json;
-		})
-		.catch((err) => {
-			error = err.detail;
-
-			console.error(err);
-			return null;
-		});
-
-	if (error) {
-		throw error;
-	}
-
-	return res;
-};
+export const deletePromptById = async (token: string, promptId: string) =>
+	fetchAPI(`/prompts/id/${promptId}/delete`, { method: 'DELETE', token });
 
 export const updatePromptAccessGrants = async (
 	token: string,
 	promptId: string,
 	accessGrants: any[]
-) => {
-	let error = null;
-
-	const res = await fetch(`${WEBUI_API_BASE_URL}/prompts/id/${promptId}/access/update`, {
+) =>
+	fetchAPI(`/prompts/id/${promptId}/access/update`, {
 		method: 'POST',
-		headers: {
-			Accept: 'application/json',
-			'Content-Type': 'application/json',
-			authorization: `Bearer ${token}`
-		},
-		body: JSON.stringify({ access_grants: accessGrants })
-	})
-		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
-		})
-		.catch((err) => {
-			error = err.detail;
-			console.error(err);
-			return null;
-		});
-
-	if (error) {
-		throw error;
-	}
-
-	return res;
-};
+		token,
+		body: { access_grants: accessGrants }
+	});
 
 ////////////////////////////
 // Prompt History APIs
@@ -468,169 +139,42 @@ export const getPromptHistory = async (
 	token: string,
 	promptId: string,
 	page: number = 0
-): Promise<PromptHistoryItem[]> => {
-	let error = null;
-
-	const res = await fetch(`${WEBUI_API_BASE_URL}/prompts/id/${promptId}/history?page=${page}`, {
-		method: 'GET',
-		headers: {
-			Accept: 'application/json',
-			'Content-Type': 'application/json',
-			authorization: `Bearer ${token}`
-		}
-	})
-		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
-		})
-		.catch((err) => {
-			error = err.detail;
-			console.error(err);
-			return null;
-		});
-
-	if (error) {
-		throw error;
-	}
-
-	return res;
-};
+): Promise<PromptHistoryItem[]> =>
+	fetchAPI(`/prompts/id/${promptId}/history`, { token, params: { page } });
 
 export const deletePromptHistoryVersion = async (
 	token: string,
 	promptId: string,
 	historyId: string
-): Promise<boolean> => {
-	let error = null;
-
-	const res = await fetch(`${WEBUI_API_BASE_URL}/prompts/id/${promptId}/history/${historyId}`, {
-		method: 'DELETE',
-		headers: {
-			Accept: 'application/json',
-			'Content-Type': 'application/json',
-			authorization: `Bearer ${token}`
-		}
-	})
-		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
-		})
-		.catch((err) => {
-			error = err.detail;
-			console.error(err);
-			return false;
-		});
-
-	if (error) {
-		throw error;
-	}
-
-	return res;
-};
+): Promise<boolean> =>
+	fetchAPI(`/prompts/id/${promptId}/history/${historyId}`, { method: 'DELETE', token });
 
 export const getPromptHistoryEntry = async (
 	token: string,
 	promptId: string,
 	historyId: string
-): Promise<PromptHistoryItem> => {
-	let error = null;
-
-	const res = await fetch(`${WEBUI_API_BASE_URL}/prompts/id/${promptId}/history/${historyId}`, {
-		method: 'GET',
-		headers: {
-			Accept: 'application/json',
-			'Content-Type': 'application/json',
-			authorization: `Bearer ${token}`
-		}
-	})
-		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
-		})
-		.catch((err) => {
-			error = err.detail;
-			console.error(err);
-			return null;
-		});
-
-	if (error) {
-		throw error;
-	}
-
-	return res;
-};
+): Promise<PromptHistoryItem> =>
+	fetchAPI(`/prompts/id/${promptId}/history/${historyId}`, { token });
 
 export const restorePromptFromHistory = async (
 	token: string,
 	promptId: string,
 	historyId: string,
 	commitMessage?: string
-) => {
-	let error = null;
-
-	const res = await fetch(
-		`${WEBUI_API_BASE_URL}/prompts/id/${promptId}/history/${historyId}/restore`,
-		{
-			method: 'POST',
-			headers: {
-				Accept: 'application/json',
-				'Content-Type': 'application/json',
-				authorization: `Bearer ${token}`
-			},
-			body: JSON.stringify({
-				commit_message: commitMessage
-			})
-		}
-	)
-		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
-		})
-		.catch((err) => {
-			error = err.detail;
-			console.error(err);
-			return null;
-		});
-
-	if (error) {
-		throw error;
-	}
-
-	return res;
-};
+) =>
+	fetchAPI(`/prompts/id/${promptId}/history/${historyId}/restore`, {
+		method: 'POST',
+		token,
+		body: { commit_message: commitMessage }
+	});
 
 export const getPromptDiff = async (
 	token: string,
 	promptId: string,
 	fromId: string,
 	toId: string
-): Promise<PromptDiff> => {
-	let error = null;
-
-	const res = await fetch(
-		`${WEBUI_API_BASE_URL}/prompts/id/${promptId}/history/diff?from_id=${fromId}&to_id=${toId}`,
-		{
-			method: 'GET',
-			headers: {
-				Accept: 'application/json',
-				'Content-Type': 'application/json',
-				authorization: `Bearer ${token}`
-			}
-		}
-	)
-		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
-		})
-		.catch((err) => {
-			error = err.detail;
-			console.error(err);
-			return null;
-		});
-
-	if (error) {
-		throw error;
-	}
-
-	return res;
-};
+): Promise<PromptDiff> =>
+	fetchAPI(`/prompts/id/${promptId}/history/diff`, {
+		token,
+		params: { from_id: fromId, to_id: toId }
+	});

@@ -14,14 +14,13 @@ from open_webui.functions import get_function_models
 from open_webui.models.functions import Functions
 from open_webui.models.models import Models
 from open_webui.models.access_grants import AccessGrants
-from open_webui.models.groups import Groups
 
 
 from open_webui.utils.plugin import (
     load_function_module_by_id,
     get_function_module_from_cache,
 )
-from open_webui.utils.access_control import has_access
+from open_webui.utils.access_control import get_user_group_ids, has_access
 
 
 from open_webui.config import (
@@ -403,9 +402,7 @@ def get_filtered_models(models, user, db=None):
             if info:
                 model_infos[model["id"]] = info
 
-        user_group_ids = {
-            group.id for group in Groups.get_groups_by_member_id(user.id, db=db)
-        }
+        user_group_ids = get_user_group_ids(user.id, db=db)
 
         # Batch-fetch accessible resource IDs in a single query instead of N has_access calls
         accessible_model_ids = AccessGrants.get_accessible_resource_ids(

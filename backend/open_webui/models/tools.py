@@ -7,6 +7,7 @@ from open_webui.internal.db import Base, JSONField, get_db, get_db_context
 from open_webui.models.users import Users, UserResponse
 from open_webui.models.groups import Groups
 from open_webui.models.access_grants import AccessGrantModel, AccessGrants
+from open_webui.models.base import ResourceTableMixin
 
 from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy import BigInteger, Column, String, Text
@@ -94,16 +95,11 @@ class ToolValves(BaseModel):
     valves: Optional[dict] = None
 
 
-class ToolsTable:
-    def _get_access_grants(
-        self, tool_id: str, db: Optional[Session] = None
-    ) -> list[AccessGrantModel]:
-        return AccessGrants.get_grants_by_resource("tool", tool_id, db=db)
+class ToolsTable(ResourceTableMixin):
+    _resource_type = "tool"
 
     def _to_tool_model(self, tool: Tool, db: Optional[Session] = None) -> ToolModel:
-        tool_data = ToolModel.model_validate(tool).model_dump(exclude={"access_grants"})
-        tool_data["access_grants"] = self._get_access_grants(tool_data["id"], db=db)
-        return ToolModel.model_validate(tool_data)
+        return self._to_resource_model(tool, ToolModel, db=db)
 
     def insert_new_tool(
         self,

@@ -1,5 +1,5 @@
-import { WEBUI_API_BASE_URL } from '$lib/constants';
 import { getTimeRange } from '$lib/utils';
+import { fetchAPI } from '$lib/utils/api';
 
 type NoteItem = {
 	title: string;
@@ -8,64 +8,11 @@ type NoteItem = {
 	access_grants?: object[];
 };
 
-export const createNewNote = async (token: string, note: NoteItem) => {
-	let error = null;
-
-	const res = await fetch(`${WEBUI_API_BASE_URL}/notes/create`, {
-		method: 'POST',
-		headers: {
-			Accept: 'application/json',
-			'Content-Type': 'application/json',
-			authorization: `Bearer ${token}`
-		},
-		body: JSON.stringify({
-			...note
-		})
-	})
-		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
-		})
-		.catch((err) => {
-			error = err.detail;
-			console.error(err);
-			return null;
-		});
-
-	if (error) {
-		throw error;
-	}
-
-	return res;
-};
+export const createNewNote = async (token: string, note: NoteItem) =>
+	fetchAPI('/notes/create', { method: 'POST', token, body: { ...note } });
 
 export const getNotes = async (token: string = '', raw: boolean = false) => {
-	let error = null;
-
-	const res = await fetch(`${WEBUI_API_BASE_URL}/notes/`, {
-		method: 'GET',
-		headers: {
-			Accept: 'application/json',
-			'Content-Type': 'application/json',
-			authorization: `Bearer ${token}`
-		}
-	})
-		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
-		})
-		.then((json) => {
-			return json;
-		})
-		.catch((err) => {
-			error = err.detail;
-			console.error(err);
-			return null;
-		});
-
-	if (error) {
-		throw error;
-	}
+	const res = await fetchAPI<any>('/notes/', { token });
 
 	if (raw) {
 		return res; // Return raw response if requested
@@ -98,218 +45,27 @@ export const searchNotes = async (
 	permission: string | null = null,
 	sortKey: string | null = null,
 	page: number | null = null
-) => {
-	let error = null;
-	const searchParams = new URLSearchParams();
+) =>
+	fetchAPI('/notes/search', {
+		token,
+		params: { query, view_option: viewOption, permission, order_by: sortKey, page }
+	});
 
-	if (query !== null) {
-		searchParams.append('query', query);
-	}
+export const getNoteList = async (token: string = '', page: number | null = null) =>
+	fetchAPI('/notes/', { token, params: { page } });
 
-	if (viewOption !== null) {
-		searchParams.append('view_option', viewOption);
-	}
+export const getNoteById = async (token: string, id: string) =>
+	fetchAPI(`/notes/${id}`, { token });
 
-	if (permission !== null) {
-		searchParams.append('permission', permission);
-	}
+export const updateNoteById = async (token: string, id: string, note: NoteItem) =>
+	fetchAPI(`/notes/${id}/update`, { method: 'POST', token, body: { ...note } });
 
-	if (sortKey !== null) {
-		searchParams.append('order_by', sortKey);
-	}
-
-	if (page !== null) {
-		searchParams.append('page', `${page}`);
-	}
-
-	const res = await fetch(`${WEBUI_API_BASE_URL}/notes/search?${searchParams.toString()}`, {
-		method: 'GET',
-		headers: {
-			Accept: 'application/json',
-			'Content-Type': 'application/json',
-			authorization: `Bearer ${token}`
-		}
-	})
-		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
-		})
-		.then((json) => {
-			return json;
-		})
-		.catch((err) => {
-			error = err.detail;
-			console.error(err);
-			return null;
-		});
-
-	if (error) {
-		throw error;
-	}
-
-	return res;
-};
-
-export const getNoteList = async (token: string = '', page: number | null = null) => {
-	let error = null;
-	const searchParams = new URLSearchParams();
-
-	if (page !== null) {
-		searchParams.append('page', `${page}`);
-	}
-
-	const res = await fetch(`${WEBUI_API_BASE_URL}/notes/?${searchParams.toString()}`, {
-		method: 'GET',
-		headers: {
-			Accept: 'application/json',
-			'Content-Type': 'application/json',
-			authorization: `Bearer ${token}`
-		}
-	})
-		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
-		})
-		.then((json) => {
-			return json;
-		})
-		.catch((err) => {
-			error = err.detail;
-			console.error(err);
-			return null;
-		});
-
-	if (error) {
-		throw error;
-	}
-
-	return res;
-};
-
-export const getNoteById = async (token: string, id: string) => {
-	let error = null;
-
-	const res = await fetch(`${WEBUI_API_BASE_URL}/notes/${id}`, {
-		method: 'GET',
-		headers: {
-			Accept: 'application/json',
-			'Content-Type': 'application/json',
-			authorization: `Bearer ${token}`
-		}
-	})
-		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
-		})
-		.then((json) => {
-			return json;
-		})
-		.catch((err) => {
-			error = err.detail;
-
-			console.error(err);
-			return null;
-		});
-
-	if (error) {
-		throw error;
-	}
-
-	return res;
-};
-
-export const updateNoteById = async (token: string, id: string, note: NoteItem) => {
-	let error = null;
-
-	const res = await fetch(`${WEBUI_API_BASE_URL}/notes/${id}/update`, {
+export const updateNoteAccessGrants = async (token: string, id: string, accessGrants: any[]) =>
+	fetchAPI(`/notes/${id}/access/update`, {
 		method: 'POST',
-		headers: {
-			Accept: 'application/json',
-			'Content-Type': 'application/json',
-			authorization: `Bearer ${token}`
-		},
-		body: JSON.stringify({
-			...note
-		})
-	})
-		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
-		})
-		.then((json) => {
-			return json;
-		})
-		.catch((err) => {
-			error = err.detail;
+		token,
+		body: { access_grants: accessGrants }
+	});
 
-			console.error(err);
-			return null;
-		});
-
-	if (error) {
-		throw error;
-	}
-
-	return res;
-};
-
-export const updateNoteAccessGrants = async (token: string, id: string, accessGrants: any[]) => {
-	let error = null;
-
-	const res = await fetch(`${WEBUI_API_BASE_URL}/notes/${id}/access/update`, {
-		method: 'POST',
-		headers: {
-			Accept: 'application/json',
-			'Content-Type': 'application/json',
-			authorization: `Bearer ${token}`
-		},
-		body: JSON.stringify({ access_grants: accessGrants })
-	})
-		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
-		})
-		.catch((err) => {
-			error = err.detail;
-			console.error(err);
-			return null;
-		});
-
-	if (error) {
-		throw error;
-	}
-
-	return res;
-};
-
-export const deleteNoteById = async (token: string, id: string) => {
-	let error = null;
-
-	const res = await fetch(`${WEBUI_API_BASE_URL}/notes/${id}/delete`, {
-		method: 'DELETE',
-		headers: {
-			Accept: 'application/json',
-			'Content-Type': 'application/json',
-			authorization: `Bearer ${token}`
-		}
-	})
-		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
-		})
-		.then((json) => {
-			return json;
-		})
-		.catch((err) => {
-			error = err.detail;
-
-			console.error(err);
-			return null;
-		});
-
-	if (error) {
-		throw error;
-	}
-
-	return res;
-};
+export const deleteNoteById = async (token: string, id: string) =>
+	fetchAPI(`/notes/${id}/delete`, { method: 'DELETE', token });

@@ -7,6 +7,7 @@ from open_webui.internal.db import Base, get_db, get_db_context
 from open_webui.models.users import Users, UserResponse
 from open_webui.models.groups import Groups
 from open_webui.models.access_grants import AccessGrantModel, AccessGrants
+from open_webui.models.base import ResourceTableMixin
 
 from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy import JSON, BigInteger, Boolean, Column, String, Text, or_
@@ -104,18 +105,11 @@ class SkillAccessListResponse(BaseModel):
     total: int = 0
 
 
-class SkillsTable:
-    def _get_access_grants(
-        self, skill_id: str, db: Optional[Session] = None
-    ) -> list[AccessGrantModel]:
-        return AccessGrants.get_grants_by_resource("skill", skill_id, db=db)
+class SkillsTable(ResourceTableMixin):
+    _resource_type = "skill"
 
     def _to_skill_model(self, skill: Skill, db: Optional[Session] = None) -> SkillModel:
-        skill_data = SkillModel.model_validate(skill).model_dump(
-            exclude={"access_grants"}
-        )
-        skill_data["access_grants"] = self._get_access_grants(skill_data["id"], db=db)
-        return SkillModel.model_validate(skill_data)
+        return self._to_resource_model(skill, SkillModel, db=db)
 
     def insert_new_skill(
         self,

@@ -7,6 +7,11 @@ from open_webui.config import DEFAULT_USER_PERMISSIONS
 import json
 
 
+def get_user_group_ids(user_id: str, db: Optional[Any] = None) -> set:
+    """Return the set of group IDs the user is a member of."""
+    return {group.id for group in Groups.get_groups_by_member_id(user_id, db=db)}
+
+
 def fill_missing_permissions(
     permissions: Dict[str, Any], default_permissions: Dict[str, Any]
 ) -> Dict[str, Any]:

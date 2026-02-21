@@ -595,8 +595,28 @@ export const updateTaskConfig = async (token: string, config: object) => {
 	return res;
 };
 
+/**
+ * Extract a single field from a fuzzy JSON blob embedded in an LLM response.
+ * Sanitises quote characters, finds the first `{...}` block, parses it, and
+ * returns the value at `key` — or `undefined` if anything fails.
+ */
+function extractJsonField(content: string | null | undefined, key: string): unknown {
+	try {
+		const sanitized = (content ?? ‘’).replace(/[‘’’`]/g, ‘"’);
+		const start = sanitized.indexOf(‘{‘);
+		const end = sanitized.lastIndexOf(‘}’);
+		if (start !== -1 && end !== -1) {
+			const parsed = JSON.parse(sanitized.substring(start, end + 1));
+			return parsed?.[key];
+		}
+	} catch (e) {
+		console.error(‘Failed to parse response:’, e);
+	}
+	return undefined;
+}
+
 export const generateTitle = async (
-	token: string = '',
+	token: string = ‘’,
 	model: string,
 	messages: object[],
 	chat_id?: string
@@ -604,10 +624,10 @@ export const generateTitle = async (
 	let error = null;
 
 	const res = await fetch(`${WEBUI_BASE_URL}/api/v1/tasks/title/completions`, {
-		method: 'POST',
+		method: ‘POST’,
 		headers: {
-			Accept: 'application/json',
-			'Content-Type': 'application/json',
+			Accept: ‘application/json’,
+			‘Content-Type’: ‘application/json’,
 			Authorization: `Bearer ${token}`
 		},
 		body: JSON.stringify({
@@ -622,7 +642,7 @@ export const generateTitle = async (
 		})
 		.catch((err) => {
 			console.error(err);
-			if ('detail' in err) {
+			if (‘detail’ in err) {
 				error = err.detail;
 			}
 			return null;
@@ -632,43 +652,12 @@ export const generateTitle = async (
 		throw error;
 	}
 
-	try {
-		// Step 1: Safely extract the response string
-		const response = res?.choices[0]?.message?.content ?? '';
-
-		// Step 2: Attempt to fix common JSON format issues like single quotes
-		const sanitizedResponse = response.replace(/['‘’`]/g, '"'); // Convert single quotes to double quotes for valid JSON
-
-		// Step 3: Find the relevant JSON block within the response
-		const jsonStartIndex = sanitizedResponse.indexOf('{');
-		const jsonEndIndex = sanitizedResponse.lastIndexOf('}');
-
-		// Step 4: Check if we found a valid JSON block (with both `{` and `}`)
-		if (jsonStartIndex !== -1 && jsonEndIndex !== -1) {
-			const jsonResponse = sanitizedResponse.substring(jsonStartIndex, jsonEndIndex + 1);
-
-			// Step 5: Parse the JSON block
-			const parsed = JSON.parse(jsonResponse);
-
-			// Step 6: If there's a "tags" key, return the tags array; otherwise, return an empty array
-			if (parsed && parsed.title) {
-				return parsed.title;
-			} else {
-				return null;
-			}
-		}
-
-		// If no valid JSON block found, return an empty array
-		return null;
-	} catch (e) {
-		// Catch and safely return empty array on any parsing errors
-		console.error('Failed to parse response: ', e);
-		return null;
-	}
+	const title = extractJsonField(res?.choices[0]?.message?.content, ‘title’);
+	return title != null ? title : null;
 };
 
 export const generateFollowUps = async (
-	token: string = '',
+	token: string = ‘’,
 	model: string,
 	messages: string,
 	chat_id?: string
@@ -676,10 +665,10 @@ export const generateFollowUps = async (
 	let error = null;
 
 	const res = await fetch(`${WEBUI_BASE_URL}/api/v1/tasks/follow_ups/completions`, {
-		method: 'POST',
+		method: ‘POST’,
 		headers: {
-			Accept: 'application/json',
-			'Content-Type': 'application/json',
+			Accept: ‘application/json’,
+			‘Content-Type’: ‘application/json’,
 			Authorization: `Bearer ${token}`
 		},
 		body: JSON.stringify({
@@ -694,7 +683,7 @@ export const generateFollowUps = async (
 		})
 		.catch((err) => {
 			console.error(err);
-			if ('detail' in err) {
+			if (‘detail’ in err) {
 				error = err.detail;
 			}
 			return null;
@@ -704,39 +693,8 @@ export const generateFollowUps = async (
 		throw error;
 	}
 
-	try {
-		// Step 1: Safely extract the response string
-		const response = res?.choices[0]?.message?.content ?? '';
-
-		// Step 2: Attempt to fix common JSON format issues like single quotes
-		const sanitizedResponse = response.replace(/['‘’`]/g, '"'); // Convert single quotes to double quotes for valid JSON
-
-		// Step 3: Find the relevant JSON block within the response
-		const jsonStartIndex = sanitizedResponse.indexOf('{');
-		const jsonEndIndex = sanitizedResponse.lastIndexOf('}');
-
-		// Step 4: Check if we found a valid JSON block (with both `{` and `}`)
-		if (jsonStartIndex !== -1 && jsonEndIndex !== -1) {
-			const jsonResponse = sanitizedResponse.substring(jsonStartIndex, jsonEndIndex + 1);
-
-			// Step 5: Parse the JSON block
-			const parsed = JSON.parse(jsonResponse);
-
-			// Step 6: If there's a "follow_ups" key, return the follow_ups array; otherwise, return an empty array
-			if (parsed && parsed.follow_ups) {
-				return Array.isArray(parsed.follow_ups) ? parsed.follow_ups : [];
-			} else {
-				return [];
-			}
-		}
-
-		// If no valid JSON block found, return an empty array
-		return [];
-	} catch (e) {
-		// Catch and safely return empty array on any parsing errors
-		console.error('Failed to parse response: ', e);
-		return [];
-	}
+	const followUps = extractJsonField(res?.choices[0]?.message?.content, ‘follow_ups’);
+	return Array.isArray(followUps) ? followUps : [];
 };
 
 export const generateTags = async (
@@ -776,39 +734,8 @@ export const generateTags = async (
 		throw error;
 	}
 
-	try {
-		// Step 1: Safely extract the response string
-		const response = res?.choices[0]?.message?.content ?? '';
-
-		// Step 2: Attempt to fix common JSON format issues like single quotes
-		const sanitizedResponse = response.replace(/['‘’`]/g, '"'); // Convert single quotes to double quotes for valid JSON
-
-		// Step 3: Find the relevant JSON block within the response
-		const jsonStartIndex = sanitizedResponse.indexOf('{');
-		const jsonEndIndex = sanitizedResponse.lastIndexOf('}');
-
-		// Step 4: Check if we found a valid JSON block (with both `{` and `}`)
-		if (jsonStartIndex !== -1 && jsonEndIndex !== -1) {
-			const jsonResponse = sanitizedResponse.substring(jsonStartIndex, jsonEndIndex + 1);
-
-			// Step 5: Parse the JSON block
-			const parsed = JSON.parse(jsonResponse);
-
-			// Step 6: If there's a "tags" key, return the tags array; otherwise, return an empty array
-			if (parsed && parsed.tags) {
-				return Array.isArray(parsed.tags) ? parsed.tags : [];
-			} else {
-				return [];
-			}
-		}
-
-		// If no valid JSON block found, return an empty array
-		return [];
-	} catch (e) {
-		// Catch and safely return empty array on any parsing errors
-		console.error('Failed to parse response: ', e);
-		return [];
-	}
+	const tags = extractJsonField(res?.choices[0]?.message?.content, ‘tags’);
+	return Array.isArray(tags) ? tags : [];
 };
 
 export const generateEmoji = async (
@@ -900,34 +827,11 @@ export const generateQueries = async (
 		throw error;
 	}
 
-	// Step 1: Safely extract the response string
-	const response = res?.choices[0]?.message?.content ?? '';
-
-	try {
-		const jsonStartIndex = response.indexOf('{');
-		const jsonEndIndex = response.lastIndexOf('}');
-
-		if (jsonStartIndex !== -1 && jsonEndIndex !== -1) {
-			const jsonResponse = response.substring(jsonStartIndex, jsonEndIndex + 1);
-
-			// Step 5: Parse the JSON block
-			const parsed = JSON.parse(jsonResponse);
-
-			// Step 6: If there's a "queries" key, return the queries array; otherwise, return an empty array
-			if (parsed && parsed.queries) {
-				return Array.isArray(parsed.queries) ? parsed.queries : [];
-			} else {
-				return [];
-			}
-		}
-
-		// If no valid JSON block found, return response as is
-		return [response];
-	} catch (e) {
-		// Catch and safely return empty array on any parsing errors
-		console.error('Failed to parse response: ', e);
-		return [response];
-	}
+	const content = res?.choices[0]?.message?.content ?? '';
+	const queries = extractJsonField(content, 'queries');
+	if (Array.isArray(queries)) return queries;
+	if (queries != null) return [];
+	return [content];
 };
 
 export const generateAutoCompletion = async (
@@ -974,33 +878,9 @@ export const generateAutoCompletion = async (
 		throw error;
 	}
 
-	const response = res?.choices[0]?.message?.content ?? '';
-
-	try {
-		const jsonStartIndex = response.indexOf('{');
-		const jsonEndIndex = response.lastIndexOf('}');
-
-		if (jsonStartIndex !== -1 && jsonEndIndex !== -1) {
-			const jsonResponse = response.substring(jsonStartIndex, jsonEndIndex + 1);
-
-			// Step 5: Parse the JSON block
-			const parsed = JSON.parse(jsonResponse);
-
-			// Step 6: If there's a "queries" key, return the queries array; otherwise, return an empty array
-			if (parsed && parsed.text) {
-				return parsed.text;
-			} else {
-				return '';
-			}
-		}
-
-		// If no valid JSON block found, return response as is
-		return response;
-	} catch (e) {
-		// Catch and safely return empty array on any parsing errors
-		console.error('Failed to parse response: ', e);
-		return response;
-	}
+	const content = res?.choices[0]?.message?.content ?? '';
+	const text = extractJsonField(content, 'text');
+	return text != null ? text : content;
 };
 
 export const generateMoACompletion = async (

@@ -2,7 +2,7 @@ import asyncio
 import hashlib
 import json
 import logging
-from typing import Optional
+from typing import Any, Optional
 from urllib.parse import urlparse
 
 import aiohttp
@@ -26,7 +26,7 @@ from open_webui.internal.db import get_session
 
 from open_webui.models.models import Models
 from open_webui.models.access_grants import AccessGrants
-from open_webui.models.groups import Groups
+from open_webui.utils.access_control import get_user_group_ids
 from open_webui.config import (
     CACHE_DIR,
 )
@@ -192,6 +192,25 @@ def get_microsoft_entra_id_access_token():
         return None
 
 
+def get_api_config(configs: dict, idx: int, url: str) -> dict:
+    """Return the API config for the given index, with legacy URL-key fallback."""
+    return configs.get(str(idx), configs.get(url, {}))
+
+
+async def resolve_model_url_idx(
+    request: Request, model_id: Optional[str], user: UserModel
+) -> int:
+    """Return the URL index for a model, refreshing the model cache if needed."""
+    if not model_id:
+        return 0
+    models = request.app.state.OPENAI_MODELS
+    if not models or model_id not in models:
+        await get_all_models(request, user=user)
+        models = request.app.state.OPENAI_MODELS
+    model = models.get(model_id)
+    return model["urlIdx"] if model else 0
+
+
 ##########################################
 #
 # API routes
@@ -284,10 +303,7 @@ async def speech(request: Request, user=Depends(get_verified_user)):
 
         url = request.app.state.config.OPENAI_API_BASE_URLS[idx]
         key = request.app.state.config.OPENAI_API_KEYS[idx]
-        api_config = request.app.state.config.OPENAI_API_CONFIGS.get(
-            str(idx),
-            request.app.state.config.OPENAI_API_CONFIGS.get(url, {}),  # Legacy support
-        )
+        api_config = get_api_config(request.app.state.config.OPENAI_API_CONFIGS, idx, url)
 
         headers, cookies = await get_headers_and_cookies(
             request, url, key, api_config, user=user
@@ -373,10 +389,7 @@ async def get_all_models_responses(request: Request, user: UserModel) -> list:
                 )
             )
         else:
-            api_config = api_configs.get(
-                str(idx),
-                api_configs.get(url, {}),  # Legacy support
-            )
+            api_config = get_api_config(api_configs, idx, url)
 
             enable = api_config.get("enable", True)
             model_ids = api_config.get("model_ids", [])
@@ -416,10 +429,7 @@ async def get_all_models_responses(request: Request, user: UserModel) -> list:
     for idx, response in enumerate(responses):
         if response:
             url = api_base_urls[idx]
-            api_config = api_configs.get(
-                str(idx),
-                api_configs.get(url, {}),  # Legacy support
-            )
+            api_config = get_api_config(api_configs, idx, url)
 
             connection_type = api_config.get("connection_type", "external")
             prefix_id = api_config.get("prefix_id", None)
@@ -459,9 +469,7 @@ async def get_filtered_models(models, user, db=None):
         model_info.id: model_info
         for model_info in Models.get_models_by_ids(model_ids, db=db)
     }
-    user_group_ids = {
-        group.id for group in Groups.get_groups_by_member_id(user.id, db=db)
-    }
+    user_group_ids = get_user_group_ids(user.id, db=db)
 
     # Batch-fetch accessible resource IDs in a single query instead of N has_access calls
     accessible_model_ids = AccessGrants.get_accessible_resource_ids(
@@ -574,10 +582,7 @@ async def get_models(
         url = request.app.state.config.OPENAI_API_BASE_URLS[url_idx]
         key = request.app.state.config.OPENAI_API_KEYS[url_idx]
 
-        api_config = request.app.state.config.OPENAI_API_CONFIGS.get(
-            str(url_idx),
-            request.app.state.config.OPENAI_API_CONFIGS.get(url, {}),  # Legacy support
-        )
+        api_config = get_api_config(request.app.state.config.OPENAI_API_CONFIGS, url_idx, url)
 
         r = None
         async with aiohttp.ClientSession(
@@ -971,9 +976,7 @@ async def generate_chat_completion(
 
         # Check if user has access to the model
         if not bypass_filter and user.role == "user":
-            user_group_ids = {
-                group.id for group in Groups.get_groups_by_member_id(user.id)
-            }
+            user_group_ids = get_user_group_ids(user.id)
             if not (
                 user.id == model_info.user_id
                 or AccessGrants.has_access(
@@ -1010,13 +1013,11 @@ async def generate_chat_completion(
             detail="Model not found",
         )
 
+    url = request.app.state.config.OPENAI_API_BASE_URLS[idx]
+    key = request.app.state.config.OPENAI_API_KEYS[idx]
+
     # Get the API config for the model
-    api_config = request.app.state.config.OPENAI_API_CONFIGS.get(
-        str(idx),
-        request.app.state.config.OPENAI_API_CONFIGS.get(
-            request.app.state.config.OPENAI_API_BASE_URLS[idx], {}
-        ),  # Legacy support
-    )
+    api_config = get_api_config(request.app.state.config.OPENAI_API_CONFIGS, idx, url)
 
     prefix_id = api_config.get("prefix_id", None)
     if prefix_id:
@@ -1030,9 +1031,6 @@ async def generate_chat_completion(
             "email": user.email,
             "role": user.role,
         }
-
-    url = request.app.state.config.OPENAI_API_BASE_URLS[idx]
-    key = request.app.state.config.OPENAI_API_KEYS[idx]
 
     # Check if model is a reasoning model that needs special handling
     if is_openai_reasoning_model(payload["model"]):
@@ -1159,19 +1157,11 @@ async def embeddings(request: Request, form_data: dict, user):
     # Find correct backend url/key based on model
     model_id = form_data.get("model")
     # Check if model is already in app state cache to avoid expensive get_all_models() call
-    models = request.app.state.OPENAI_MODELS
-    if not models or model_id not in models:
-        await get_all_models(request, user=user)
-        models = request.app.state.OPENAI_MODELS
-    if model_id in models:
-        idx = models[model_id]["urlIdx"]
+    idx = await resolve_model_url_idx(request, model_id, user)
 
     url = request.app.state.config.OPENAI_API_BASE_URLS[idx]
     key = request.app.state.config.OPENAI_API_KEYS[idx]
-    api_config = request.app.state.config.OPENAI_API_CONFIGS.get(
-        str(idx),
-        request.app.state.config.OPENAI_API_CONFIGS.get(url, {}),  # Legacy support
-    )
+    api_config = get_api_config(request.app.state.config.OPENAI_API_CONFIGS, idx, url)
 
     r = None
     session = None
@@ -1259,19 +1249,11 @@ async def responses(
     idx = 0
     model_id = form_data.model
     if model_id:
-        models = request.app.state.OPENAI_MODELS
-        if not models or model_id not in models:
-            await get_all_models(request, user=user)
-            models = request.app.state.OPENAI_MODELS
-        if model_id in models:
-            idx = models[model_id]["urlIdx"]
+        idx = await resolve_model_url_idx(request, model_id, user)
 
     url = request.app.state.config.OPENAI_API_BASE_URLS[idx]
     key = request.app.state.config.OPENAI_API_KEYS[idx]
-    api_config = request.app.state.config.OPENAI_API_CONFIGS.get(
-        str(idx),
-        request.app.state.config.OPENAI_API_CONFIGS.get(url, {}),  # Legacy support
-    )
+    api_config = get_api_config(request.app.state.config.OPENAI_API_CONFIGS, idx, url)
 
     r = None
     session = None
@@ -1365,21 +1347,11 @@ async def proxy(path: str, request: Request, user=Depends(get_verified_user)):
     idx = 0
     model_id = payload.get("model") if isinstance(payload, dict) else None
     if model_id:
-        models = request.app.state.OPENAI_MODELS
-        if not models or model_id not in models:
-            await get_all_models(request, user=user)
-            models = request.app.state.OPENAI_MODELS
-        if model_id in models:
-            idx = models[model_id]["urlIdx"]
+        idx = await resolve_model_url_idx(request, model_id, user)
 
     url = request.app.state.config.OPENAI_API_BASE_URLS[idx]
     key = request.app.state.config.OPENAI_API_KEYS[idx]
-    api_config = request.app.state.config.OPENAI_API_CONFIGS.get(
-        str(idx),
-        request.app.state.config.OPENAI_API_CONFIGS.get(
-            request.app.state.config.OPENAI_API_BASE_URLS[idx], {}
-        ),  # Legacy support
-    )
+    api_config = get_api_config(request.app.state.config.OPENAI_API_CONFIGS, idx, url)
 
     r = None
     session = None

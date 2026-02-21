@@ -1,6 +1,8 @@
 import { WEBUI_API_BASE_URL } from '$lib/constants';
 import { splitStream } from '$lib/utils';
+import { fetchAPI } from '$lib/utils/api';
 
+// uploadFile uses FormData — keep as raw fetch
 export const uploadFile = async (
 	token: string,
 	file: File,
@@ -94,6 +96,7 @@ export const uploadFile = async (
 	return res;
 };
 
+// getFileProcessStatus returns a streaming Response — keep as raw fetch
 export const getFileProcessStatus = async (token: string, id: string) => {
 	const queryParams = new URLSearchParams();
 	queryParams.append('stream', 'true');
@@ -118,6 +121,7 @@ export const getFileProcessStatus = async (token: string, id: string) => {
 	return res;
 };
 
+// uploadDir has no Content-Type header, keep as raw fetch
 export const uploadDir = async (token: string) => {
 	let error = null;
 
@@ -144,140 +148,22 @@ export const uploadDir = async (token: string) => {
 	return res;
 };
 
-export const getFiles = async (token: string = '') => {
-	let error = null;
-
-	const res = await fetch(`${WEBUI_API_BASE_URL}/files/`, {
-		method: 'GET',
-		headers: {
-			Accept: 'application/json',
-			'Content-Type': 'application/json',
-			authorization: `Bearer ${token}`
-		}
-	})
-		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
-		})
-		.then((json) => {
-			return json;
-		})
-		.catch((err) => {
-			error = err.detail;
-			console.error(err);
-			return null;
-		});
-
-	if (error) {
-		throw error;
-	}
-
-	return res;
-};
+export const getFiles = async (token: string = '') => fetchAPI('/files/', { token });
 
 export const searchFiles = async (
 	token: string,
 	filename: string = '*',
 	skip: number = 0,
 	limit: number = 50
-) => {
-	let error = null;
+) => fetchAPI('/files/search', { token, params: { filename, skip, limit } });
 
-	const searchParams = new URLSearchParams();
-	searchParams.append('filename', filename);
-	searchParams.append('skip', String(skip));
-	searchParams.append('limit', String(limit));
+export const getFileById = async (token: string, id: string) =>
+	fetchAPI(`/files/${id}`, { token });
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/files/search?${searchParams.toString()}`, {
-		method: 'GET',
-		headers: {
-			Accept: 'application/json',
-			'Content-Type': 'application/json',
-			authorization: `Bearer ${token}`
-		}
-	})
-		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
-		})
-		.catch((err) => {
-			error = err.detail;
-			console.error(err);
-			return [];
-		});
+export const updateFileDataContentById = async (token: string, id: string, content: string) =>
+	fetchAPI(`/files/${id}/data/content/update`, { method: 'POST', token, body: { content } });
 
-	if (error) {
-		throw error;
-	}
-
-	return res;
-};
-
-export const getFileById = async (token: string, id: string) => {
-	let error = null;
-
-	const res = await fetch(`${WEBUI_API_BASE_URL}/files/${id}`, {
-		method: 'GET',
-		headers: {
-			Accept: 'application/json',
-			'Content-Type': 'application/json',
-			authorization: `Bearer ${token}`
-		}
-	})
-		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
-		})
-		.then((json) => {
-			return json;
-		})
-		.catch((err) => {
-			error = err.detail;
-			console.error(err);
-			return null;
-		});
-
-	if (error) {
-		throw error;
-	}
-
-	return res;
-};
-
-export const updateFileDataContentById = async (token: string, id: string, content: string) => {
-	let error = null;
-
-	const res = await fetch(`${WEBUI_API_BASE_URL}/files/${id}/data/content/update`, {
-		method: 'POST',
-		headers: {
-			Accept: 'application/json',
-			'Content-Type': 'application/json',
-			authorization: `Bearer ${token}`
-		},
-		body: JSON.stringify({
-			content: content
-		})
-	})
-		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
-		})
-		.then((json) => {
-			return json;
-		})
-		.catch((err) => {
-			error = err.detail;
-			console.error(err);
-			return null;
-		});
-
-	if (error) {
-		throw error;
-	}
-
-	return res;
-};
-
+// getFileContentById returns an ArrayBuffer — keep as raw fetch
 export const getFileContentById = async (id: string) => {
 	let error = null;
 
@@ -306,64 +192,8 @@ export const getFileContentById = async (id: string) => {
 	return res;
 };
 
-export const deleteFileById = async (token: string, id: string) => {
-	let error = null;
+export const deleteFileById = async (token: string, id: string) =>
+	fetchAPI(`/files/${id}`, { method: 'DELETE', token });
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/files/${id}`, {
-		method: 'DELETE',
-		headers: {
-			Accept: 'application/json',
-			'Content-Type': 'application/json',
-			authorization: `Bearer ${token}`
-		}
-	})
-		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
-		})
-		.then((json) => {
-			return json;
-		})
-		.catch((err) => {
-			error = err.detail;
-			console.error(err);
-			return null;
-		});
-
-	if (error) {
-		throw error;
-	}
-
-	return res;
-};
-
-export const deleteAllFiles = async (token: string) => {
-	let error = null;
-
-	const res = await fetch(`${WEBUI_API_BASE_URL}/files/all`, {
-		method: 'DELETE',
-		headers: {
-			Accept: 'application/json',
-			'Content-Type': 'application/json',
-			authorization: `Bearer ${token}`
-		}
-	})
-		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
-		})
-		.then((json) => {
-			return json;
-		})
-		.catch((err) => {
-			error = err.detail;
-			console.error(err);
-			return null;
-		});
-
-	if (error) {
-		throw error;
-	}
-
-	return res;
-};
+export const deleteAllFiles = async (token: string) =>
+	fetchAPI('/files/all', { method: 'DELETE', token });

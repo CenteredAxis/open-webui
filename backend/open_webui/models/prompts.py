@@ -8,6 +8,7 @@ from open_webui.models.groups import Groups
 from open_webui.models.users import Users, UserResponse
 from open_webui.models.prompt_history import PromptHistories
 from open_webui.models.access_grants import AccessGrantModel, AccessGrants
+from open_webui.models.base import ResourceTableMixin
 
 
 from pydantic import BaseModel, ConfigDict, Field
@@ -90,20 +91,13 @@ class PromptForm(BaseModel):
     is_production: Optional[bool] = True  # Whether to set new version as production
 
 
-class PromptsTable:
-    def _get_access_grants(
-        self, prompt_id: str, db: Optional[Session] = None
-    ) -> list[AccessGrantModel]:
-        return AccessGrants.get_grants_by_resource("prompt", prompt_id, db=db)
+class PromptsTable(ResourceTableMixin):
+    _resource_type = "prompt"
 
     def _to_prompt_model(
         self, prompt: Prompt, db: Optional[Session] = None
     ) -> PromptModel:
-        prompt_data = PromptModel.model_validate(prompt).model_dump(
-            exclude={"access_grants"}
-        )
-        prompt_data["access_grants"] = self._get_access_grants(prompt_data["id"], db=db)
-        return PromptModel.model_validate(prompt_data)
+        return self._to_resource_model(prompt, PromptModel, db=db)
 
     def insert_new_prompt(
         self, user_id: str, form_data: PromptForm, db: Optional[Session] = None

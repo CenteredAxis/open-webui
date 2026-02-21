@@ -19,7 +19,7 @@ from open_webui.models.skills import (
 )
 from open_webui.models.access_grants import AccessGrants, has_public_read_access_grant
 from open_webui.utils.auth import get_admin_user, get_verified_user
-from open_webui.utils.access_control import has_access, has_permission
+from open_webui.utils.access_control import get_user_group_ids, has_access, has_permission
 
 from open_webui.config import BYPASS_ADMIN_ACCESS_CONTROL
 from open_webui.constants import ERROR_MESSAGES
@@ -45,9 +45,7 @@ async def get_skills(
     if user.role == "admin" and BYPASS_ADMIN_ACCESS_CONTROL:
         skills = Skills.get_skills(db=db)
     else:
-        user_group_ids = {
-            group.id for group in Groups.get_groups_by_member_id(user.id, db=db)
-        }
+        user_group_ids = get_user_group_ids(user.id, db=db)
         all_skills = Skills.get_skills(db=db)
         skills = [
             skill

@@ -37,7 +37,7 @@ from open_webui.models.files import (
 )
 from open_webui.models.chats import Chats
 from open_webui.models.knowledge import Knowledges
-from open_webui.models.groups import Groups
+from open_webui.utils.access_control import get_user_group_ids
 from open_webui.models.access_grants import AccessGrants
 
 
@@ -78,9 +78,7 @@ def has_access_to_file(
 
     # Check if the file is associated with any knowledge bases the user has access to
     knowledge_bases = Knowledges.get_knowledges_by_file_id(file_id, db=db)
-    user_group_ids = {
-        group.id for group in Groups.get_groups_by_member_id(user.id, db=db)
-    }
+    user_group_ids = get_user_group_ids(user.id, db=db)
     for knowledge_base in knowledge_bases:
         if knowledge_base.user_id == user.id or AccessGrants.has_access(
             user_id=user.id,
