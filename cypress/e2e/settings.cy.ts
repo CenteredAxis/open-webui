@@ -60,4 +60,90 @@ describe('Settings', () => {
 			cy.get('button').contains('About').click();
 		});
 	});
+
+	// System tabs (formerly admin-only settings)
+	context('System tabs are visible and selectable', () => {
+		const systemTabs = [
+			'System',
+			'Backend Connections',
+			'Models',
+			'Evaluations',
+			'Tool Servers',
+			'Documents',
+			'Web Search',
+			'Code Execution',
+			'Interface Defaults',
+			'Audio Backends',
+			'Images',
+			'Pipelines',
+			'Database'
+		] as const;
+
+		it('all system tabs appear in the settings modal', () => {
+			for (const tab of systemTabs) {
+				cy.get('button[role="tab"]').contains(tab).should('exist');
+			}
+		});
+
+		systemTabs.forEach((tab) => {
+			it(`user can click the ${tab} tab`, () => {
+				cy.get('button[role="tab"]').contains(tab).click();
+				cy.get('button[role="tab"]').contains(tab).should('have.attr', 'aria-selected', 'true');
+			});
+		});
+	});
+
+	context('System tab save buttons', () => {
+		it('System tab has a save button', () => {
+			cy.get('button[role="tab"]').contains('System').click();
+			cy.get('button').contains('Save').should('exist');
+		});
+
+		it('Backend Connections tab has a save button', () => {
+			cy.get('button[role="tab"]').contains('Backend Connections').click();
+			cy.get('button').contains('Save').should('exist');
+		});
+
+		it('Documents tab has a save button', () => {
+			cy.get('button[role="tab"]').contains('Documents').click();
+			cy.get('button').contains('Save').should('exist');
+		});
+
+		it('Web Search tab has a save button', () => {
+			cy.get('button[role="tab"]').contains('Web Search').click();
+			cy.get('button').contains('Save').should('exist');
+		});
+
+		it('Audio Backends tab has a save button', () => {
+			cy.get('button[role="tab"]').contains('Audio Backends').click();
+			cy.get('button').contains('Save').should('exist');
+		});
+
+		it('Images tab has a save button', () => {
+			cy.get('button[role="tab"]').contains('Images').click();
+			cy.get('button').contains('Save').should('exist');
+		});
+	});
+
+	context('Admin Settings link is removed', () => {
+		it('the settings modal does not contain an Admin Settings link', () => {
+			cy.contains('Admin Settings').should('not.exist');
+		});
+	});
+});
+
+describe('Admin settings redirect', () => {
+	beforeEach(() => {
+		cy.loginAdmin();
+	});
+
+	it('/admin/settings redirects to home', () => {
+		cy.visit('/admin/settings');
+		cy.url().should('eq', Cypress.config().baseUrl + '/');
+	});
+
+	it('/admin/settings/general redirects to home', () => {
+		cy.visit('/admin/settings/general');
+		cy.url().should('eq', Cypress.config().baseUrl + '/');
+	});
 });
