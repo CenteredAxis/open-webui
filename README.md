@@ -25,6 +25,50 @@ Passionate about open-source AI? [Join our team →](https://careers.openwebui.c
 
 For more information, be sure to check out our [Open WebUI Documentation](https://docs.openwebui.com/).
 
+---
+
+## Changes in This Fork
+
+This fork extends Open WebUI with the following features:
+
+### Chat Branching
+
+Branch a conversation from any message — user or assistant — without disturbing the original chat. A **Branch** button appears in each message's action toolbar. The branch captures only the message path from the root up to that point, so you can explore a different direction cleanly.
+
+When viewing a branch chat, a banner in the navbar shows the original chat's title and offers two actions:
+
+- **Return** — navigate straight back to the original chat.
+- **Return with context** — formats the new messages from the branch as a markdown transcript and pre-fills the original chat's input with it, so you can carry insights back without copy-pasting.
+
+### System Telemetry Panel
+
+A collapsible **System Telemetry** section at the top of the Chat Controls pane shows live performance data for the current session:
+
+- **Generation speed** — tokens/second with a rolling sparkline chart.
+- **Context window** — token usage bar (prompt + completion vs. context limit) with colour transitions from green → amber → red.
+- **Parameters** — interactive sliders for Temperature, Top P, and Frequency Penalty that take effect on the next message.
+- **Session stats** — per-message prompt / generated / total token counts.
+
+All data is sourced from existing message metadata — no backend changes required. Gracefully hides sections when data is absent (e.g. OpenAI-only deployments).
+
+### Unified Add-ons Page
+
+The separate **Tools** and **Skills** workspace tabs are replaced by a single **Add-ons** page (`/workspace/addons`) that presents the full three-tier stack in one scrollable view:
+
+| Layer | Description |
+|---|---|
+| **Tools** | Atomic capabilities — API calls, code execution, etc. |
+| **MCP Servers** | Infrastructure layer — OpenAPI / MCP connections with enable/disable toggles, type badges, and inline configuration. |
+| **Skills** | Knowledge layer — when/how to use tools and behaviour shaping. |
+
+Deep-links to existing tool and skill editors (`/workspace/tools/…`, `/workspace/skills/…`) continue to work unchanged.
+
+### Folded Admin Settings
+
+All admin configuration panels (General, Connections, Models, Audio, Images, Documents, Web Search, Interface, Pipelines, Tools) are surfaced directly inside the user **Settings** modal. There are no separate admin role guards — the assumption is a single-user or trusted install where all settings should be accessible in one place.
+
+---
+
 ## Key Features of Open WebUI ⭐
 
 - 🚀 **Effortless Setup**: Install seamlessly using Docker or Kubernetes (kubectl, kustomize or helm) for a hassle-free experience with support for both `:ollama` and `:cuda` tagged images.
